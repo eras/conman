@@ -16,7 +16,7 @@ sub init_db() {
   $dbh->do("CREATE TABLE device_type(id INTEGER PRIMARY KEY, name TEXT NOT NULL)");
   $dbh->do("CREATE TABLE room(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''), description TEXT, notes TEXT)");
   $dbh->do("CREATE TABLE rack(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''), description TEXT, room_id INT, notes TEXT, FOREIGN KEY(room_id) REFERENCES room(id))");
-  $dbh->do("CREATE TABLE device(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL  CHECK (NOT name = ''), description TEXT, rack_id INT, notes TEXT, FOREIGN KEY(rack_id) REFERENCES rack(id))");
+  $dbh->do("CREATE TABLE device(id INTEGER PRIMARY KEY AUTOINCREMENT, device_type_id INT, name TEXT NOT NULL  CHECK (NOT name = ''), description TEXT, rack_id INT, notes TEXT, FOREIGN KEY(rack_id) REFERENCES rack(id), FOREIGN KEY(device_type_id) REFERENCES device_type(id))");
   $dbh->do("CREATE TABLE interface_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''))");
   $dbh->do("CREATE TABLE interface(id INTEGER PRIMARY KEY AUTOINCREMENT, interface_type_id INT, name TEXT NOT NULL CHECK (NOT name = ''), device_id INT, notes TEXT, FOREIGN KEY(interface_type_id) REFERENCES interface_type(id), FOREIGN KEY(device_id) REFERENCES device(id))");
   $dbh->do("CREATE TABLE connection_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''))");
@@ -43,6 +43,7 @@ sub init_db() {
 
 sub print_help() {
     print "Help!\n";
+    print "list (room|device|interface|rack|connection|devtype|conntype|inttype)\n";
 }
 
 sub print_help_list() {
@@ -79,6 +80,11 @@ if ($command) {
 			$sth = $dbh->prepare("SELECT id, name, description, notes FROM room");
 			$table = Text::Table->new("ID", "Name", "Description", "Notes");
 		    }
+		    case "device" {
+			$sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, device.description, notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id");
+			$table = Text::Table->new("ID", "Type", "Name", "Description", "Notes");
+		    }
+		    else { print_help_list(); }
 		}
 	    }
 	}
