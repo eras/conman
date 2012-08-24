@@ -13,18 +13,32 @@ my $dbfile = './cables.db';
 my $dbh;
 
 sub init_db() {
-  $dbh->do("CREATE TABLE device_type(id INTEGER PRIMARY KEY, name TEXT)");
-  $dbh->do("CREATE TABLE room(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT)");
-  $dbh->do("CREATE TABLE rack(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, room_id INT, CONSTRAINT room_id_fk FOREIGN KEY(room_id) REFERENCES room(id))");
-  $dbh->do("CREATE TABLE device(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, rack_id INT, FOREIGN KEY(rack_id) REFERENCES rack(id))");
-  $dbh->do("CREATE TABLE interface_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)");
-  $dbh->do("CREATE TABLE interface(id INTEGER PRIMARY KEY AUTOINCREMENT, interface_type_id INT, device_id INT, FOREIGN KEY(interface_type_id) REFERENCES interface_type(id), FOREIGN KEY(device_id) REFERENCES device(id))");
-  $dbh->do("CREATE TABLE connection_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)");
+  $dbh->do("CREATE TABLE device_type(id INTEGER PRIMARY KEY, name TEXT NOT NULL)");
+  $dbh->do("CREATE TABLE room(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''), description TEXT, notes TEXT)");
+  $dbh->do("CREATE TABLE rack(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''), description TEXT, room_id INT, notes TEXT, FOREIGN KEY(room_id) REFERENCES room(id))");
+  $dbh->do("CREATE TABLE device(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL  CHECK (NOT name = ''), description TEXT, rack_id INT, notes TEXT, FOREIGN KEY(rack_id) REFERENCES rack(id))");
+  $dbh->do("CREATE TABLE interface_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''))");
+  $dbh->do("CREATE TABLE interface(id INTEGER PRIMARY KEY AUTOINCREMENT, interface_type_id INT, name TEXT NOT NULL CHECK (NOT name = ''), device_id INT, notes TEXT, FOREIGN KEY(interface_type_id) REFERENCES interface_type(id), FOREIGN KEY(device_id) REFERENCES device(id))");
+  $dbh->do("CREATE TABLE connection_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''))");
   $dbh->do("CREATE TABLE connection(".
-    "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, to_interface_id INT, connection_type_id INT, ".
-    "CONSTRAINT connection_type_id_fk FOREIGN KEY(connection_type_id) REFERENCES connection_type(id), ".
-    "CONSTRAINT from_interface_id_fk FOREIGN KEY(from_interface_id) REFERENCES interface(id), ".
-    "CONSTRAINT to_interface_id_fk FOREIGN KEY(to_interface_id) REFERENCES interface(id))");
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, to_interface_id INT, connection_type_id INT, notes TEXT, ".
+    "FOREIGN KEY(connection_type_id) REFERENCES connection_type(id), ".
+    "FOREIGN KEY(from_interface_id) REFERENCES interface(id), ".
+    "FOREIGN KEY(to_interface_id) REFERENCES interface(id))");
+
+  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'switch')");
+  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'computer')");
+  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'patch panel')");
+  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'wall sockets')");
+  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'KVM switch')");
+
+  $dbh->do("INSERT INTO connection_type (id, name) VALUES (null, 'cable')");
+  $dbh->do("INSERT INTO connection_type (id, name) VALUES (null, 'building cabling')");
+
+  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (copper)')");
+  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (fiber)')");
+  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Serial console')");
+  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'KVM')");
 }
 
 sub print_help() {
@@ -62,8 +76,8 @@ if ($command) {
 	    } else {
 		switch ($subcommand) {
 		    case "room" {
-			$sth = $dbh->prepare("SELECT * FROM room");
-			$table = Text::Table->new("ID", "Name", "Description");
+			$sth = $dbh->prepare("SELECT id, name, description, notes FROM room");
+			$table = Text::Table->new("ID", "Name", "Description", "Notes");
 		    }
 		}
 	    }
