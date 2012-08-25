@@ -52,6 +52,7 @@ sub print_help_list() {
 
 sub print_help_add() {
     print "caman.pl add room <name> [<description> [notes]]\n";
+    print "caman.pl add rack <name> <roomid> [<description> [notes]]\n";
 }
 
 my $dsn = "dbi:SQLite:dbname=$dbfile";
@@ -126,6 +127,28 @@ if ($command) {
 			    my $notes = shift;
 			    my $query = "INSERT INTO room (name";
 			    my $values = "('".$name."'";
+			    if ($description) {
+				$query = $query.",description";
+				$values = $values.",'".$description."'";
+			    }
+			    if ($notes) {
+				$query = $query.",notes";
+				$values = $values.",'".$notes."'";
+			    }
+			    $query = $query.") VALUES ".$values.")";
+			    $sth = $dbh->prepare($query);
+			} else {
+			    print_help_add();
+			}
+		    }
+		    case "rack" {
+			my $name = shift;
+			my $roomid = shift;
+			if ($name && $roomid) {
+			    my $description = shift;
+			    my $notes = shift;
+			    my $query = "INSERT INTO rack (name, room_id";
+			    my $values = "('".$name."',".$roomid;
 			    if ($description) {
 				$query = $query.",description";
 				$values = $values.",'".$description."'";
