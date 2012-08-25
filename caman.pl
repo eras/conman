@@ -81,8 +81,8 @@ if ($command) {
 			$table = Text::Table->new("ID", "Name", "Description", "Notes");
 		    }
 		    case "device" {
-			$sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, device.description, notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id");
-			$table = Text::Table->new("ID", "Type", "Name", "Description", "Notes");
+			$sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id");
+			$table = Text::Table->new("ID", "Type", "Name", "Rack", "Description", "Notes");
 		    }
 		    case "rack" {
 			$sth = $dbh->prepare("SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id");
