@@ -54,6 +54,7 @@ sub print_help_add() {
     print "caman.pl add room <name> [<description> [notes]]\n";
     print "caman.pl add rack <name> <roomid> [<description> [notes]]\n";
     print "caman.pl add device <name> <typeid> <rackid> [<description> [notes]]\n";
+    print "caman.pl add interface <name> <typeid> <deviceid> [notes]\n";
 }
 
 my $dsn = "dbi:SQLite:dbname=$dbfile";
@@ -95,7 +96,7 @@ if ($command) {
 			$table = Text::Table->new("ID", "Name", "Description", "Room", "Notes");
 		    }
 		    case "interface" {
-			$sth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, device.name FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id");
+			$sth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, device.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id");
 			$table = Text::Table->new("ID", "Name", "Type", "Device", "Notes");
 		    }
 		    case "connection" {
@@ -180,6 +181,25 @@ if ($command) {
 				$query = $query.",description";
 				$values = $values.",'".$description."'";
 			    }
+			    if ($notes) {
+				$query = $query.",notes";
+				$values = $values.",'".$notes."'";
+			    }
+			    $query = $query.") VALUES ".$values.")";
+			    $sth = $dbh->prepare($query);
+			} else {
+			    print_help_add();
+			}
+		    }
+		    # add interface <name> <typeid> <deviceid> [notes]
+		    case "interface" {
+			my $name = shift;
+			my $typeid = shift;
+			my $deviceid = shift;
+			if ($name && $typeid && $deviceid) {
+			    my $notes = shift;
+			    my $query = "INSERT INTO interface (name, interface_type_id, device_id";
+			    my $values = "('".$name."',".$typeid.",".$deviceid;
 			    if ($notes) {
 				$query = $query.",notes";
 				$values = $values.",'".$notes."'";
