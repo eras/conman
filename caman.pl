@@ -97,8 +97,8 @@ if ($command) {
 			$table = Text::Table->new("ID", "Name", "Description", "Room", "Notes");
 		    }
 		    case "interface" {
-			$sth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, device.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
-			$table = Text::Table->new("ID", "Name", "Type", "Device", "Notes");
+			$sth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
+			$table = Text::Table->new("ID", "Name", "Type", "Notes");
 		    }
 		    case "connection" {
 			$sth = $dbh->prepare("SELECT connection.id, d1.name || '.' || i1.name, d2.name || '.' || i2.name, connection_type.name FROM connection, device as d1, interface as i1, device as d2, interface as i2, connection_type WHERE i1.id=connection.from_interface_id AND i1.device_id=d1.id AND i2.id=connection.to_interface_id AND i2.device_id=d2.id AND connection.connection_type_id=connection_type.id ORDER BY connection_type.name ASC, d1.name ASC");
