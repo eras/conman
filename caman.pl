@@ -42,12 +42,12 @@ sub init_db() {
 }
 
 sub print_help() {
-    print "Help!\n";
-    print "list (room|device|interface|rack|connection)\n";
+    print_help_list();
+    print_help_add();
 }
 
 sub print_help_list() {
-    print "Help! List!\n";
+    print "caman.pl list (room|device|interface|rack|connection)\n";
 }
 
 sub print_help_add() {
@@ -145,7 +145,7 @@ if ($command) {
 			    print_help_add();
 			}
 		    }
-		    # add device <name> <roomid> [<description> [notes]]
+		    # add rack <name> <roomid> [<description> [notes]]
 		    case "rack" {
 			my $name = shift;
 			my $roomid = shift;
