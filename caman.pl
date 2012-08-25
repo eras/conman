@@ -84,6 +84,14 @@ if ($command) {
 			$sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, device.description, notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id");
 			$table = Text::Table->new("ID", "Type", "Name", "Description", "Notes");
 		    }
+		    case "rack" {
+			$sth = $dbh->prepare("SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id");
+			$table = Text::Table->new("ID", "Name", "Description", "Room", "Notes");
+		    }
+		    case "interface" {
+			$sth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, device.name FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id");
+			$table = Text::Table->new("ID", "Name", "Type", "Device", "Notes");
+		    }
 		    else { print_help_list(); }
 		}
 	    }
