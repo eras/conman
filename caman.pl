@@ -1,4 +1,4 @@
-#!/usr/bin/perl -W
+#!/usr/bin/perl
 
 use strict;
 use warnings;
@@ -63,10 +63,10 @@ sub print_help_add() {
 sub print_header() {
     print <<EOF;
 Content-Type: text/html; charset=UTF-8
-	
+
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
 <html>
-<head><title>Hello</title></head>
+<head><title>Modeemi CableManager</title></head>
 <body>
 EOF
 }
@@ -111,17 +111,18 @@ print_header();
 print_navigation();
 
 my $sth;
-my $table;
 my $command = param('command');
 my $subcommand = param('subcommand');
 if ($command && $subcommand) {
     switch ($command) {
 	case "list" {
-	    $table = new HTML::Table();
+	    my $table = new HTML::Table();
+#	    my @addNewItemRow;
 	    switch ($subcommand) {
 		case "room" {
 		    $sth = $dbh->prepare("SELECT id, name, description, notes FROM room");
 		    $table->addRow("ID", "Name", "Description", "Notes");
+#		    @addNewItemRow = ;
 		}
 		case "device" {
 		    $sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY rack.name");
@@ -147,6 +148,7 @@ if ($command && $subcommand) {
 		    $table->addRow(@$row);
 		}
 		$table->setRowHead(1);
+#		$table->addRow(@addNewItemRow);
 		$table->print;
 		$sth->finish();
 	    }
