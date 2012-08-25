@@ -117,12 +117,12 @@ if ($command && $subcommand) {
     switch ($command) {
 	case "list" {
 	    my $table = new HTML::Table();
-#	    my @addNewItemRow;
+	    my @addNewItemRow;
 	    switch ($subcommand) {
 		case "room" {
 		    $sth = $dbh->prepare("SELECT id, name, description, notes FROM room");
 		    $table->addRow("ID", "Name", "Description", "Notes");
-#		    @addNewItemRow = ;
+		    @addNewItemRow = ("", textfield('name','name',40,80), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="room"/>'.submit('submit', 'add'));
 		}
 		case "device" {
 		    $sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY rack.name");
@@ -147,9 +147,13 @@ if ($command && $subcommand) {
 		while ($row = $sth->fetchrow_arrayref()) {
 		    $table->addRow(@$row);
 		}
+		print start_form(-method=>'get', -action=>'caman.cgi');
 		$table->setRowHead(1);
-#		$table->addRow(@addNewItemRow);
+		if (@addNewItemRow) {
+		    $table->addRow(@addNewItemRow);
+		}
 		$table->print;
+		print end_form();
 		$sth->finish();
 	    }
 	}
