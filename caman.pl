@@ -50,6 +50,10 @@ sub print_help_list() {
     print "Help! List!\n";
 }
 
+sub print_help_add() {
+    print "caman.pl add room <name> [<description> [notes]]\n";
+}
+
 my $dsn = "dbi:SQLite:dbname=$dbfile";
 my $doinit = 0;
 
@@ -99,6 +103,49 @@ if ($command) {
 		    else { print_help_list(); }
 		}
 	    }
+	    if ($sth) {
+		$sth->execute();
+		my $row;
+		while ($row = $sth->fetchrow_arrayref()) {
+		    $table->load($row);
+		}
+		print $table;
+		$sth->finish();
+	    }
+	}
+	case "add" {
+	    my $subcommand = shift;
+	    if (!$subcommand) {
+		print_help_add();
+	    } else {
+		switch ($subcommand) {
+		    case "room" {
+			my $name = shift;
+			if ($name) {
+			    my $description = shift;
+			    my $notes = shift;
+			    my $query = "INSERT INTO room (name";
+			    my $values = "('".$name."'";
+			    if ($description) {
+				$query = $query.",description";
+				$values = $values.",'".$description."'";
+			    }
+			    if ($notes) {
+				$query = $query.",notes";
+				$values = $values.",'".$notes."'";
+			    }
+			    $query = $query.") VALUES ".$values.")";
+			    $sth = $dbh->prepare($query);
+			} else {
+			    print_help_add();
+			}
+		    }
+		}
+	    }
+	    if ($sth) {
+		$sth->execute();
+		$sth->finish();
+	    }
 	}
 	else { print_help(); }
     }
@@ -106,13 +153,4 @@ if ($command) {
     print_help();
 }
 
-if ($sth) {
-    $sth->execute();
-    my $row;
-    while ($row = $sth->fetchrow_arrayref()) {
-	$table->load($row);
-    }
-    print $table;
-    $sth->finish();
-}
 $dbh->disconnect();
