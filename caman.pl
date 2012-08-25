@@ -55,6 +55,7 @@ sub print_help_add() {
     print "caman.pl add rack <name> <roomid> [<description> [notes]]\n";
     print "caman.pl add device <name> <typeid> <rackid> [<description> [notes]]\n";
     print "caman.pl add interface <name> <typeid> <deviceid> [notes]\n";
+    print "caman.pl add connection <fromintid> <tointid> <conntypeid> [notes]\n";
 }
 
 my $dsn = "dbi:SQLite:dbname=$dbfile";
@@ -200,6 +201,25 @@ if ($command) {
 			    my $notes = shift;
 			    my $query = "INSERT INTO interface (name, interface_type_id, device_id";
 			    my $values = "('".$name."',".$typeid.",".$deviceid;
+			    if ($notes) {
+				$query = $query.",notes";
+				$values = $values.",'".$notes."'";
+			    }
+			    $query = $query.") VALUES ".$values.")";
+			    $sth = $dbh->prepare($query);
+			} else {
+			    print_help_add();
+			}
+		    }
+		    # add connection <fromintid> <tointid> <conntypeid> [notes]
+		    case "connection" {
+			my $fromintid = shift;
+			my $tointid = shift;
+			my $conntypeid = shift;
+			if ($fromintid && $tointid && $conntypeid) {
+			    my $notes = shift;
+			    my $query = "INSERT INTO connection (from_interface_id, to_interface_id, connection_type_id";
+			    my $values = "('".$fromintid."',".$tointid.",".$conntypeid;
 			    if ($notes) {
 				$query = $query.",notes";
 				$values = $values.",'".$notes."'";
