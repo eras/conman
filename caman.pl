@@ -43,7 +43,7 @@ sub init_db() {
 
 sub print_help() {
     print "Help!\n";
-    print "list (room|device|interface|rack|connection|devtype|conntype|inttype)\n";
+    print "list (room|device|interface|rack|connection)\n";
 }
 
 sub print_help_list() {
@@ -53,6 +53,7 @@ sub print_help_list() {
 sub print_help_add() {
     print "caman.pl add room <name> [<description> [notes]]\n";
     print "caman.pl add rack <name> <roomid> [<description> [notes]]\n";
+    print "caman.pl add device <name> <typeid> <rackid> [<description> [notes]]\n";
 }
 
 my $dsn = "dbi:SQLite:dbname=$dbfile";
@@ -120,6 +121,7 @@ if ($command) {
 		print_help_add();
 	    } else {
 		switch ($subcommand) {
+		    # add device <name> [<description> [notes]]
 		    case "room" {
 			my $name = shift;
 			if ($name) {
@@ -141,6 +143,7 @@ if ($command) {
 			    print_help_add();
 			}
 		    }
+		    # add device <name> <roomid> [<description> [notes]]
 		    case "rack" {
 			my $name = shift;
 			my $roomid = shift;
@@ -149,6 +152,30 @@ if ($command) {
 			    my $notes = shift;
 			    my $query = "INSERT INTO rack (name, room_id";
 			    my $values = "('".$name."',".$roomid;
+			    if ($description) {
+				$query = $query.",description";
+				$values = $values.",'".$description."'";
+			    }
+			    if ($notes) {
+				$query = $query.",notes";
+				$values = $values.",'".$notes."'";
+			    }
+			    $query = $query.") VALUES ".$values.")";
+			    $sth = $dbh->prepare($query);
+			} else {
+			    print_help_add();
+			}
+		    }
+		    # add device <name> <typeid> <rackid> [<description> [notes]]
+		    case "device" {
+			my $name = shift;
+			my $typeid = shift;
+			my $rackid = shift;
+			if ($name && $typeid && $rackid) {
+			    my $description = shift;
+			    my $notes = shift;
+			    my $query = "INSERT INTO device (name, device_type_id, rack_id";
+			    my $values = "('".$name."',".$typeid.",".$rackid;
 			    if ($description) {
 				$query = $query.",description";
 				$values = $values.",'".$description."'";
