@@ -105,6 +105,32 @@ sub select_roomid() {
     return popup_menu('roomid', \@values, $values[0], \%labels);
 }
 
+sub select_rackid() {
+    my $rackidsth = $dbh->prepare("select id, name from rack");
+    $rackidsth->execute();
+    my $row;
+    my %labels;
+    my @values;
+    while ($row = $rackidsth->fetchrow_arrayref()) {
+	push(@values, $row->[0]);
+	$labels{$row->[0]} = $row->[1];
+    }
+    return popup_menu('rackid', \@values, $values[0], \%labels);
+}
+
+sub select_devtypeid() {
+    my $devtypeidsth = $dbh->prepare("select id, name from device_type");
+    $devtypeidsth->execute();
+    my $row;
+    my %labels;
+    my @values;
+    while ($row = $devtypeidsth->fetchrow_arrayref()) {
+	push(@values, $row->[0]);
+	$labels{$row->[0]} = $row->[1];
+    }
+    return popup_menu('devtypeid', \@values, $values[0], \%labels);
+}
+
 my $dsn = "dbi:SQLite:dbname=$dbfile";
 my $doinit = 0;
 
@@ -137,14 +163,15 @@ if ($command && $subcommand) {
 		    $table->addRow("ID", "Name", "Description", "Notes");
 		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="room"/>'.submit('submit', 'add'));
 		}
-		case "device" {
-		    $sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY rack.name");
-		    $table->addRow("ID", "Type", "Name", "Rack", "Description", "Notes");
-		}
 		case "rack" {
 		    $sth = $dbh->prepare("SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY room.name");
 		    $table->addRow("ID", "Name", "Description", "Room", "Notes");
 		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), select_roomid(), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
+		}
+		case "device" {
+		    $sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY rack.name");
+		    $table->addRow("ID", "Type", "Name", "Rack", "Description", "Notes");
+		    @addNewItemRow = ("", select_devtypeid(), textfield('name','name',20,80), select_rackid(), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
 		}
 		case "interface" {
 		    $sth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
@@ -173,7 +200,7 @@ if ($command && $subcommand) {
 	}
 	case "add" {
 	    switch ($subcommand) {
-		# add device <name> [<description> [notes]]
+		# add room <name> [<description> [notes]]
 		case "room" {
 		    my $name = param('name');
 		    if ($name) {
@@ -214,10 +241,10 @@ if ($command && $subcommand) {
 			$sth = $dbh->prepare($query);
 		    }
 		}
-		# add device <name> <typeid> <rackid> [<description> [notes]]
+		# add device <name> <devtypeid> <rackid> [<description> [notes]]
 		case "device" {
 		    my $name = param('name');
-		    my $typeid = param('typeid');
+		    my $typeid = param('devtypeid');
 		    my $rackid = param('rackid');
 		    if ($name && $typeid && $rackid) {
 			my $description = param('description');
