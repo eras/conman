@@ -145,7 +145,7 @@ if ($command && $subcommand) {
 		$sth->execute();
 		my $row;
 		while ($row = $sth->fetchrow_arrayref()) {
-		    $table->addRow(@$row);
+		    $table->addRow((@$row, "<a href=\"$scriptname?command=remove&subcommand=$subcommand&id=$row->[0]\">delete</a>"));
 		}
 		print start_form(-method=>'get', -action=>'caman.cgi');
 		$table->setRowHead(1);
@@ -259,6 +259,14 @@ if ($command && $subcommand) {
 	    }
 	    if ($sth) {
 		$sth->execute();
+		$sth->finish();
+	    }
+	}
+	case "remove" {
+	    my $id = param('id');
+	    if ($subcommand && $id) {
+		$sth = $dbh->prepare("DELETE FROM $subcommand where id = ?");
+		$sth->execute($id);
 		$sth->finish();
 	    }
 	}
