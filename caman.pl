@@ -206,7 +206,9 @@ if ($command && $subcommand) {
 		$sth->execute();
 		my $row;
 		while ($row = $sth->fetchrow_arrayref()) {
-		    $table->addRow((@$row, "<a href=\"$scriptname?command=remove&subcommand=$subcommand&id=$row->[0]\">delete</a>"));
+		    my $id=$row->[0];
+		    $row->[0] = "<a href=\"$scriptname?command=edit&subcommand=$subcommand&id=$id\">$id</a>";
+		    $table->addRow((@$row, "<a href=\"$scriptname?command=remove&subcommand=$subcommand&id=$id\">delete</a>"));
 		}
 		print start_form(-method=>'get', -action=>'caman.cgi');
 		$table->setRowHead(1);
