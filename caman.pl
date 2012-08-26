@@ -102,6 +102,7 @@ sub select_roomid() {
 	push(@values, $row->[0]);
 	$labels{$row->[0]} = $row->[1];
     }
+    $roomidsth->finish();
     return popup_menu('roomid', \@values, $values[0], \%labels);
 }
 
@@ -115,6 +116,7 @@ sub select_rackid() {
 	push(@values, $row->[0]);
 	$labels{$row->[0]} = $row->[1];
     }
+    $rackidsth->finish();
     return popup_menu('rackid', \@values, $values[0], \%labels);
 }
 
@@ -128,7 +130,25 @@ sub select_devtypeid() {
 	push(@values, $row->[0]);
 	$labels{$row->[0]} = $row->[1];
     }
+    $devtypeidsth->finish();
     return popup_menu('devtypeid', \@values, $values[0], \%labels);
+}
+
+sub edit_device($) {
+    my ($id) = @_;
+    my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ? ORDER BY rack.name");
+    $devsth->execute($id);
+
+    my $row;
+    while ($row = $devsth->fetchrow_arrayref()) {
+	print "<h2>$row->[2]</h2>\n";
+	print "Type: $row->[1]<br/>\n";
+	print "Rack: $row->[3]<br/>\n";
+	print "Description: $row->[4]<br/>\n";
+	print "Notes: $row->[5]<br/>\n";
+    }
+    
+    $devsth->finish();
 }
 
 my $dsn = "dbi:SQLite:dbname=$dbfile";
@@ -309,6 +329,16 @@ if ($command && $subcommand) {
 		$sth = $dbh->prepare("DELETE FROM $subcommand where id = ?");
 		$sth->execute($id);
 		$sth->finish();
+	    }
+	}
+	case "edit" {
+	    my $id = param('id');
+	    if ($subcommand && $id) {
+		switch ($subcommand) {
+		    case "device" {
+			edit_device($id);
+		    }
+		}
 	    }
 	}
     }
