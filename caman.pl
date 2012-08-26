@@ -136,7 +136,7 @@ sub select_devtypeid() {
 
 sub edit_device($) {
     my ($id) = @_;
-    my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ? ORDER BY rack.name");
+    my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ?");
     $devsth->execute($id);
 
     my $row;
@@ -146,9 +146,18 @@ sub edit_device($) {
 	print "Rack: $row->[3]<br/>\n";
 	print "Description: $row->[4]<br/>\n";
 	print "Notes: $row->[5]<br/>\n";
-    }
-    
+    }    
     $devsth->finish();
+
+    print "<h3>Interfaces</h3>br/>\n";
+    my $inttable = new HTML::Table();
+    $inttable->addRow("ID", "Name", "Type");
+    my $devintsth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id WHERE interface.device_id = ? ORDER BY interface.name");
+    $devintsth->execute($id);
+    while ($row = $devsth->fetchrow_arrayref()) {
+	$inttable->addRow(@$row);
+    }
+    $devintsth->finish();
 }
 
 my $dsn = "dbi:SQLite:dbname=$dbfile";
