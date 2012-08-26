@@ -135,7 +135,7 @@ if ($command && $subcommand) {
 		case "room" {
 		    $sth = $dbh->prepare("SELECT id, name, description, notes FROM room");
 		    $table->addRow("ID", "Name", "Description", "Notes");
-		    @addNewItemRow = ("", textfield('name','name',40,80), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="room"/>'.submit('submit', 'add'));
+		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="room"/>'.submit('submit', 'add'));
 		}
 		case "device" {
 		    $sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY rack.name");
@@ -144,7 +144,7 @@ if ($command && $subcommand) {
 		case "rack" {
 		    $sth = $dbh->prepare("SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY room.name");
 		    $table->addRow("ID", "Name", "Description", "Room", "Notes");
-		    @addNewItemRow = ("", textfield('name','name',40,80), textfield('description','description', 40, 80), select_roomid(), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
+		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), select_roomid(), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
 		}
 		case "interface" {
 		    $sth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
