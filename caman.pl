@@ -92,6 +92,19 @@ sub print_footer() {
 EOF
 }
 
+sub select_roomid() {
+    my $roomidsth = $dbh->prepare("select id, name from room");
+    $roomidsth->execute();
+    my $row;
+    my %labels;
+    my @values;
+    while ($row = $roomidsth->fetchrow_arrayref()) {
+	push(@values, $row->[0]);
+	$labels{$row->[0]} = $row->[1];
+    }
+    return popup_menu('roomid', \@values, $values[0], \%labels);
+}
+
 my $dsn = "dbi:SQLite:dbname=$dbfile";
 my $doinit = 0;
 
@@ -131,6 +144,7 @@ if ($command && $subcommand) {
 		case "rack" {
 		    $sth = $dbh->prepare("SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY room.name");
 		    $table->addRow("ID", "Name", "Description", "Room", "Notes");
+		    @addNewItemRow = ("", textfield('name','name',40,80), textfield('description','description', 40, 80), select_roomid(), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
 		}
 		case "interface" {
 		    $sth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
