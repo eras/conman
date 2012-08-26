@@ -149,15 +149,16 @@ sub edit_device($) {
     }    
     $devsth->finish();
 
-    print "<h3>Interfaces</h3>br/>\n";
+    print "<h3>Interfaces</h3>\n";
     my $inttable = new HTML::Table();
     $inttable->addRow("ID", "Name", "Type");
     my $devintsth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id WHERE interface.device_id = ? ORDER BY interface.name");
     $devintsth->execute($id);
-    while ($row = $devsth->fetchrow_arrayref()) {
+    while ($row = $devintsth->fetchrow_arrayref()) {
 	$inttable->addRow(@$row);
     }
     $devintsth->finish();
+    $inttable->print;
 }
 
 my $dsn = "dbi:SQLite:dbname=$dbfile";
