@@ -92,6 +92,20 @@ sub print_footer() {
 EOF
 }
 
+sub get_connection_list_for_interface($) {
+    my @connlist;
+    my ($id) = @_;
+    # TODO: the actual listing
+    my $connsth = $dbh->prepare("select device.name || '.' || interface.name from interface INNER JOIN device ON interface.device_id=device.id where interface.id = ?");
+    $connsth->execute($id);
+    my $row;
+    while ($row = $connsth->fetchrow_arrayref()) {
+	push(@connlist, $row->[0]);
+    }
+    $connsth->finish();
+    return @connlist;
+}
+
 sub select_roomid() {
     my $roomidsth = $dbh->prepare("select id, name from room");
     $roomidsth->execute();
@@ -149,7 +163,7 @@ sub select_inttypeid() {
 }
 
 sub select_tointid() {
-    my $tointidsth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
+    my $tointidsth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name FROM interface  ORDER BY device.name ASC, interface.name ASC");
     $tointidsth->execute();
     my $row;
     my %labels;
@@ -198,6 +212,7 @@ sub edit_device($) {
     $devintsth->execute($id);
     while ($row = $devintsth->fetchrow_arrayref()) {
 	my @connections;
+	@connections = get_connection_list_for_interface($row->[0]);
 	if (@connections > 0) {
 	    $inttable->addRow(@$row, @connections);
 	} else {
