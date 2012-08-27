@@ -206,6 +206,7 @@ sub edit_device($) {
     $devsth->finish();
 
     print "<h3>Interfaces</h3>\n";
+    print start_form(-method=>'get', -action=>"$scriptname");
     my $inttable = new HTML::Table();
     $inttable->addRow("ID", "Name", "Type", "Notes", "Connections");
     my $devintsth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id WHERE interface.device_id = ? ORDER BY interface.name");
@@ -221,9 +222,9 @@ sub edit_device($) {
 	    $inttable->addRow(@$row, $addconnectionform);
 	}
     }
-
     $devintsth->finish();
     $inttable->print;
+
     print "<h4>Add a new interface</h4>\n";
     print start_form(-method=>'get', -action=>"$scriptname");
     $inttable = new HTML::Table();
