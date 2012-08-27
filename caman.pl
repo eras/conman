@@ -34,9 +34,10 @@ sub init_db() {
   $dbh->do("CREATE TABLE interface(id INTEGER PRIMARY KEY AUTOINCREMENT, interface_type_id INT, name TEXT NOT NULL CHECK (NOT name = ''), device_id INT, notes TEXT, FOREIGN KEY(interface_type_id) REFERENCES interface_type(id), FOREIGN KEY(device_id) REFERENCES device(id))");
 
   $dbh->do("CREATE TABLE linklist(".
-    "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, interface_id INT, seq INT NOT NULL, ".
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, interface_id INT UNIQUE, seq INT NOT NULL, ".
     "FOREIGN KEY(from_interface_id) REFERENCES interface(id), ".
-    "FOREIGN KEY(interface_id) REFERENCES interface(id))");
+    "FOREIGN KEY(interface_id) REFERENCES interface(id), ".
+    "CHECK (NOT from_interface_id = interface_id))");
 
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'switch')");
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'computer')");
