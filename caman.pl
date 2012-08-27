@@ -238,7 +238,7 @@ if ($command && $subcommand) {
 		my $row;
 		while ($row = $sth->fetchrow_arrayref()) {
 		    my $id=$row->[0];
-		    $row->[0] = "<a href=\"$scriptname?command=edit&subcommand=$subcommand&id=$id\">$id</a>";
+		    $row->[2] = "<a href=\"$scriptname?command=edit&subcommand=$subcommand&id=$id\">$row->[2]</a>";
 		    $table->addRow((@$row, "<a href=\"$scriptname?command=remove&subcommand=$subcommand&id=$id\">delete</a>"));
 		}
 		print start_form(-method=>'get', -action=>"$scriptname");
