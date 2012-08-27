@@ -8,7 +8,9 @@ use HTML::Table;
 use CGI qw(:standard);
 
 # TODO
-# - removing links from device view
+# -editing rooms
+# -editing racks
+# -editing device info
 
 # user editable variables begin
 my $dbfile = './cables.db';
