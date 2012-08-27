@@ -7,6 +7,9 @@ use Switch;
 use HTML::Table;
 use CGI qw(:standard);
 
+# TODO
+# - removing links from device view
+
 # user editable variables begin
 my $dbfile = './cables.db';
 my $scriptname = 'caman.cgi';
@@ -233,8 +236,9 @@ if ($command && $subcommand) {
 		    $table->addRow("ID", "Name", "Type", "Notes");
 		}
 		case "connection" {
+		    print "<h2>TBD, maybe</h2>\n";
 		    $sth = $dbh->prepare("SELECT connection.id, d1.name || '.' || i1.name, d2.name || '.' || i2.name, connection_type.name FROM connection, device as d1, interface as i1, device as d2, interface as i2, connection_type WHERE i1.id=connection.from_interface_id AND i1.device_id=d1.id AND i2.id=connection.to_interface_id AND i2.device_id=d2.id AND connection.connection_type_id=connection_type.id ORDER BY connection_type.name ASC, d1.name ASC");
-		    $table->addRow("ID", "From", "To", "Type");
+		    $table->addRow("From", "Hops");
 		}
 	    }
 	    if ($sth) {
