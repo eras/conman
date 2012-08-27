@@ -12,6 +12,9 @@ my $dbfile = './cables.db';
 my $scriptname = 'caman.cgi';
 # user editable variables end
 
+my $query_interface_id_name = "SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON device.id = interface.device_id ORDER BY device.name ASC, interface.name ASC";
+my $query_interface_type_id_name = "select id, name from interface_type";
+
 my $dbh;
 
 sub init_db() {
@@ -27,6 +30,11 @@ sub init_db() {
     "FOREIGN KEY(connection_type_id) REFERENCES connection_type(id), ".
     "FOREIGN KEY(from_interface_id) REFERENCES interface(id), ".
     "FOREIGN KEY(to_interface_id) REFERENCES interface(id))");
+
+  $dbh->do("CREATE TABLE linklist(".
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, interface_id INT, seq INT NOT NULL, ".
+    "FOREIGN KEY(from_interface_id) REFERENCES interface(id), ".
+    "FOREIGN KEY(interface_id) REFERENCES interface(id))");
 
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'switch')");
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'computer')");
@@ -95,10 +103,17 @@ EOF
 sub get_connection_list_for_interface($) {
     my @connlist;
     my ($id) = @_;
-    # TODO: the actual listing
-    my $connsth = $dbh->prepare("select device.name || '.' || interface.name from interface INNER JOIN device ON interface.device_id=device.id where interface.id = ?");
+    my $connsth;
+    $connsth = $dbh->prepare("select device.name || '.' || interface.name from interface INNER JOIN device ON interface.device_id=device.id WHERE interface.id = ?");
     $connsth->execute($id);
     my $row;
+    while ($row = $connsth->fetchrow_arrayref()) {
+	push(@connlist, $row->[0]);
+    }
+    $connsth->finish();
+
+    $connsth = $dbh->prepare("select device.name || '.' || interface.name from linklist INNER JOIN device ON interface.device_id=device.id INNER JOIN interface ON interface.id=linklist.interface_id WHERE linklist.from_interface_id = ? ORDER BY seq ASC");
+    $connsth->execute($id);
     while ($row = $connsth->fetchrow_arrayref()) {
 	push(@connlist, $row->[0]);
     }
@@ -148,32 +163,20 @@ sub select_devtypeid() {
     return popup_menu('devtypeid', \@values, $values[0], \%labels);
 }
 
-sub select_inttypeid() {
-    my $inttypeidsth = $dbh->prepare("select id, name from interface_type");
-    $inttypeidsth->execute();
-    my $row;
-    my %labels;
-    my @values;
-    while ($row = $inttypeidsth->fetchrow_arrayref()) {
-	push(@values, $row->[0]);
-	$labels{$row->[0]} = $row->[1];
-    }
-    $inttypeidsth->finish();
-    return popup_menu('typeid', \@values, $values[0], \%labels);
-}
-
-sub select_tointid() {
-    my $tointidsth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name FROM interface  ORDER BY device.name ASC, interface.name ASC");
+sub select_id_name($$) {
+    my ($query, $selectname) = @_;
+    my $tointidsth = $dbh->prepare($query);
     $tointidsth->execute();
     my $row;
     my %labels;
     my @values;
+    push(@values, '');
     while ($row = $tointidsth->fetchrow_arrayref()) {
 	push(@values, $row->[0]);
 	$labels{$row->[0]} = $row->[1];
     }
     $tointidsth->finish();
-    return popup_menu('tointid', \@values, $values[0], \%labels);
+    return popup_menu($selectname, \@values, $values[0], \%labels);
 }
 
 sub select_conntypeid() {
@@ -214,21 +217,24 @@ sub edit_device($) {
     while ($row = $devintsth->fetchrow_arrayref()) {
 	my @connections;
 	@connections = get_connection_list_for_interface($row->[0]);
-	if (@connections > 0) {
+	if (@connections > 1) {
 	    $inttable->addRow(@$row, @connections);
 	} else {
-	    my $addconnectionform;
-	    $addconnectionform = start_form(-method=>'get', -action=>"$scriptname").select_tointid().select_conntypeid().hidden('fromintid',$row->[0]).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="connection"/>'.submit('submit','add conn').end_form();
-	    $inttable->addRow(@$row, $addconnectionform);
+	    $inttable->addRow(@$row);
 	}
     }
     $devintsth->finish();
+    $inttable->addRow((start_form(-method=>'get', -action=>"$scriptname")));
+    my @addconnectionform;
+    @addconnectionform = ('', '', '', '', select_id_name($query_interface_id_name,'fromintid'), select_id_name($query_interface_id_name,'link1'), select_id_name($query_interface_id_name,'link2'), select_id_name($query_interface_id_name,'link3').hidden('fromintid',$row->[0]).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="connection"/>', submit('submit','add conn'));
+    $inttable->addRow(@addconnectionform);
+    $inttable->addRow((end_form()));
     $inttable->print;
 
     print "<h4>Add a new interface</h4>\n";
     print start_form(-method=>'get', -action=>"$scriptname");
     $inttable = new HTML::Table();
-    $inttable->addRow(textfield('name','name',10,20), select_inttypeid(), textfield('notes','', 20,40), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="interface"/>'.hidden('deviceid',"$id").submit('submit', 'add'));
+    $inttable->addRow(textfield('name','name',10,20), select_id_name($query_interface_type_id_name,'typeid'), textfield('notes','', 20,40), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="interface"/>'.hidden('deviceid',"$id").submit('submit', 'add'));
     $inttable->print;
     print end_form();
 }
@@ -322,6 +328,8 @@ if ($command && $subcommand) {
 			}
 			$query = $query.") VALUES ".$values.")";
 			$sth = $dbh->prepare($query);
+			$sth->execute();
+			$sth->finish();
 		    }
 		}
 		# add rack <name> <roomid> [<description> [notes]]
@@ -343,6 +351,8 @@ if ($command && $subcommand) {
 			}
 			$query = $query.") VALUES ".$values.")";
 			$sth = $dbh->prepare($query);
+			$sth->execute();
+			$sth->finish();
 		    }
 		}
 		# add device <name> <devtypeid> <rackid> [<description> [notes]]
@@ -365,6 +375,8 @@ if ($command && $subcommand) {
 			}
 			$query = $query.") VALUES ".$values.")";
 			$sth = $dbh->prepare($query);
+			$sth->execute();
+			$sth->finish();
 		    }
 		}
 		# add interface <name> <typeid> <deviceid> [notes]
@@ -382,29 +394,27 @@ if ($command && $subcommand) {
 			}
 			$query = $query.") VALUES ".$values.")";
 			$sth = $dbh->prepare($query);
+			$sth->execute();
+			$sth->finish();
 		    }
 		}
 		# add connection <fromintid> <tointid> <conntypeid> [notes]
 		case "connection" {
 		    my $fromintid = param('fromintid');
-		    my $tointid = param('tointid');
-		    my $conntypeid = param('conntypeid');
-		    if ($fromintid && $tointid && $conntypeid) {
-			my $notes = param('notes');
-			my $query = "INSERT INTO connection (from_interface_id, to_interface_id, connection_type_id";
-			my $values = "('".$fromintid."',".$tointid.",".$conntypeid;
-			if ($notes) {
-			    $query = $query.",notes";
-			    $values = $values.",'".$notes."'";
+		    if ($fromintid) {
+			for (my $i = 1;$i < 4;$i++) {
+			    my $link = param("link$i");
+			    if ($link) {
+				my $query = "INSERT INTO linklist (from_interface_id, interface_id, seq";
+				my $values = "('".$fromintid."',".$link.",".$i;
+				$query = $query.") VALUES ".$values.")";
+				$sth = $dbh->prepare($query);
+				$sth->execute();
+				$sth->finish();
+			    }
 			}
-			$query = $query.") VALUES ".$values.")";
-			$sth = $dbh->prepare($query);
 		    }
 		}
-	    }
-	    if ($sth) {
-		$sth->execute();
-		$sth->finish();
 	    }
 	}
 	case "remove" {
