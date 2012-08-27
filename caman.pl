@@ -168,9 +168,9 @@ sub edit_device($) {
 	my @connections;
 	@connections = get_connection_list_for_interface($row->[0]);
 	if (@connections > 1) {
-	    $inttable->addRow(@$row, @connections);
+	    $inttable->addRow(@$row, @connections, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
 	} else {
-	    $inttable->addRow(@$row);
+	    $inttable->addRow(@$row, "<a href=\"$scriptname?command=remove&subcommand=interface&id=$row->[0]\">delete interface</a>");
 	}
     }
     $devintsth->finish();
@@ -371,9 +371,15 @@ if ($command && $subcommand) {
 	case "remove" {
 	    my $id = param('id');
 	    if ($subcommand && $id) {
-		$sth = $dbh->prepare("DELETE FROM $subcommand where id = ?");
-		$sth->execute($id);
-		$sth->finish();
+		if ($subcommand eq "connection") {
+		    $sth = $dbh->prepare("DELETE FROM linklist WHERE from_interface_id = (SELECT DISTINCT from_interface_id FROM linklist WHERE from_interface_id = ? OR interface_id = ?)");
+		    $sth->execute($id,$id);
+		    $sth->finish();
+		} else {
+		    $sth = $dbh->prepare("DELETE FROM $subcommand where id = ?");
+		    $sth->execute($id);
+		    $sth->finish();
+		}
 	    }
 	}
 	case "edit" {
