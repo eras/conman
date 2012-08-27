@@ -148,6 +148,34 @@ sub select_inttypeid() {
     return popup_menu('typeid', \@values, $values[0], \%labels);
 }
 
+sub select_tointid() {
+    my $tointidsth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
+    $tointidsth->execute();
+    my $row;
+    my %labels;
+    my @values;
+    while ($row = $tointidsth->fetchrow_arrayref()) {
+	push(@values, $row->[0]);
+	$labels{$row->[0]} = $row->[1];
+    }
+    $tointidsth->finish();
+    return popup_menu('tointid', \@values, $values[0], \%labels);
+}
+
+sub select_conntypeid() {
+    my $conntypeidsth = $dbh->prepare("SELECT id, name FROM connection_type ORDER BY name");
+    $conntypeidsth->execute();
+    my $row;
+    my %labels;
+    my @values;
+    while ($row = $conntypeidsth->fetchrow_arrayref()) {
+	push(@values, $row->[0]);
+	$labels{$row->[0]} = $row->[1];
+    }
+    $conntypeidsth->finish();
+    return popup_menu('conntypeid', \@values, $values[0], \%labels);
+}
+
 sub edit_device($) {
     my ($id) = @_;
     my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ?");
@@ -164,18 +192,29 @@ sub edit_device($) {
     $devsth->finish();
 
     print "<h3>Interfaces</h3>\n";
-    print start_form(-method=>'get', -action=>"$scriptname");
     my $inttable = new HTML::Table();
-    $inttable->addRow("ID", "Name", "Type", "Notes");
+    $inttable->addRow("ID", "Name", "Type", "Notes", "Connections");
     my $devintsth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id WHERE interface.device_id = ? ORDER BY interface.name");
     $devintsth->execute($id);
     while ($row = $devintsth->fetchrow_arrayref()) {
-	$inttable->addRow(@$row);
+	my @connections;
+	if (@connections > 0) {
+	    $inttable->addRow(@$row, @connections);
+	} else {
+	    my $addconnectionform;
+	    $addconnectionform = start_form(-method=>'get', -action=>"$scriptname").select_tointid().select_conntypeid().hidden('fromintid',$row->[0]).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="connection"/>'.submit('submit','add conn').end_form();
+	    $inttable->addRow(@$row, $addconnectionform);
+	}
     }
-    $inttable->addRow("", textfield('name','name',10,20), select_inttypeid(), textfield('notes','', 20,40), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="interface"/>'.hidden('deviceid',"$id").submit('submit', 'add'));
 
     $devintsth->finish();
     $inttable->print;
+    print "<h4>Add a new interface</h4>\n";
+    print start_form(-method=>'get', -action=>"$scriptname");
+    $inttable = new HTML::Table();
+    $inttable->addRow(textfield('name','name',10,20), select_inttypeid(), textfield('notes','', 20,40), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="interface"/>'.hidden('deviceid',"$id").submit('submit', 'add'));
+    $inttable->print;
+    print end_form();
 }
 
 my $dsn = "dbi:SQLite:dbname=$dbfile";
