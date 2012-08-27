@@ -32,12 +32,6 @@ sub init_db() {
   $dbh->do("CREATE TABLE device(id INTEGER PRIMARY KEY AUTOINCREMENT, device_type_id INT, name TEXT NOT NULL  CHECK (NOT name = ''), description TEXT, rack_id INT, notes TEXT, FOREIGN KEY(rack_id) REFERENCES rack(id), FOREIGN KEY(device_type_id) REFERENCES device_type(id))");
   $dbh->do("CREATE TABLE interface_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''))");
   $dbh->do("CREATE TABLE interface(id INTEGER PRIMARY KEY AUTOINCREMENT, interface_type_id INT, name TEXT NOT NULL CHECK (NOT name = ''), device_id INT, notes TEXT, FOREIGN KEY(interface_type_id) REFERENCES interface_type(id), FOREIGN KEY(device_id) REFERENCES device(id))");
-  $dbh->do("CREATE TABLE connection_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''))");
-  $dbh->do("CREATE TABLE connection(".
-    "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, to_interface_id INT, connection_type_id INT, notes TEXT, ".
-    "FOREIGN KEY(connection_type_id) REFERENCES connection_type(id), ".
-    "FOREIGN KEY(from_interface_id) REFERENCES interface(id), ".
-    "FOREIGN KEY(to_interface_id) REFERENCES interface(id))");
 
   $dbh->do("CREATE TABLE linklist(".
     "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, interface_id INT, seq INT NOT NULL, ".
@@ -49,9 +43,6 @@ sub init_db() {
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'patch panel')");
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'wall sockets')");
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'KVM switch')");
-
-  $dbh->do("INSERT INTO connection_type (id, name) VALUES (null, 'cable')");
-  $dbh->do("INSERT INTO connection_type (id, name) VALUES (null, 'building cabling')");
 
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (copper)')");
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (fiber)')");
@@ -238,9 +229,8 @@ if ($command && $subcommand) {
 		    $table->addRow("ID", "Name", "Type", "Notes");
 		}
 		case "connection" {
-		    print "<h2>TBD, maybe</h2>\n";
-		    $sth = $dbh->prepare("SELECT connection.id, d1.name || '.' || i1.name, d2.name || '.' || i2.name, connection_type.name FROM connection, device as d1, interface as i1, device as d2, interface as i2, connection_type WHERE i1.id=connection.from_interface_id AND i1.device_id=d1.id AND i2.id=connection.to_interface_id AND i2.device_id=d2.id AND connection.connection_type_id=connection_type.id ORDER BY connection_type.name ASC, d1.name ASC");
-		    $table->addRow("From", "Hops");
+		    $sth = $dbh->prepare("SELECT i1.id, d1.name || '.' || i1.name, d2.name || '.' || i2.name, linklist.seq FROM interface AS i1, interface AS i2, linklist, device AS d1, device AS d2 WHERE linklist.from_interface_id = i1.id AND linklist.interface_id=i2.id AND i1.device_id=d1.id AND i2.device_id=d2.id ORDER BY d1.name, i1.name, linklist.seq");
+		    $table->addRow("Start if ID", "From", "Hops", "Seq");
 		}
 	    }
 	    if ($sth) {
