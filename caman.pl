@@ -223,7 +223,7 @@ if ($command && $subcommand) {
 		case "device" {
 		    $sth = $dbh->prepare("SELECT device.id, device.name, device_type.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY device.name");
 		    $table->addRow("ID", "Name", "Type", "Rack", "Description", "Notes");
-		    @addNewItemRow = ("", select_id_name($query_device_type_id_name,'devtypeid'), textfield('name','name',20,80), select_id_name($query_rack_id_name,'rackid'), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
+		    @addNewItemRow = ("", textfield('name','name',20,80), select_id_name($query_device_type_id_name,'devtypeid'), select_id_name($query_rack_id_name,'rackid'), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
 		}
 		case "interface" {
 		    $sth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
