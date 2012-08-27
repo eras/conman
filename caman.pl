@@ -14,6 +14,9 @@ my $scriptname = 'caman.cgi';
 
 my $query_interface_id_name = "SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON device.id = interface.device_id ORDER BY device.name ASC, interface.name ASC";
 my $query_interface_type_id_name = "select id, name from interface_type";
+my $query_device_type_id_name = "select id, name from device_type";
+my $query_room_id_name = "select id, name from room";
+my $query_rack_id_name = "select id, name from rack";
 
 my $dbh;
 
@@ -121,48 +124,6 @@ sub get_connection_list_for_interface($) {
     return @connlist;
 }
 
-sub select_roomid() {
-    my $roomidsth = $dbh->prepare("select id, name from room");
-    $roomidsth->execute();
-    my $row;
-    my %labels;
-    my @values;
-    while ($row = $roomidsth->fetchrow_arrayref()) {
-	push(@values, $row->[0]);
-	$labels{$row->[0]} = $row->[1];
-    }
-    $roomidsth->finish();
-    return popup_menu('roomid', \@values, $values[0], \%labels);
-}
-
-sub select_rackid() {
-    my $rackidsth = $dbh->prepare("select id, name from rack");
-    $rackidsth->execute();
-    my $row;
-    my %labels;
-    my @values;
-    while ($row = $rackidsth->fetchrow_arrayref()) {
-	push(@values, $row->[0]);
-	$labels{$row->[0]} = $row->[1];
-    }
-    $rackidsth->finish();
-    return popup_menu('rackid', \@values, $values[0], \%labels);
-}
-
-sub select_devtypeid() {
-    my $devtypeidsth = $dbh->prepare("select id, name from device_type");
-    $devtypeidsth->execute();
-    my $row;
-    my %labels;
-    my @values;
-    while ($row = $devtypeidsth->fetchrow_arrayref()) {
-	push(@values, $row->[0]);
-	$labels{$row->[0]} = $row->[1];
-    }
-    $devtypeidsth->finish();
-    return popup_menu('devtypeid', \@values, $values[0], \%labels);
-}
-
 sub select_id_name($$) {
     my ($query, $selectname) = @_;
     my $tointidsth = $dbh->prepare($query);
@@ -177,20 +138,6 @@ sub select_id_name($$) {
     }
     $tointidsth->finish();
     return popup_menu($selectname, \@values, $values[0], \%labels);
-}
-
-sub select_conntypeid() {
-    my $conntypeidsth = $dbh->prepare("SELECT id, name FROM connection_type ORDER BY name");
-    $conntypeidsth->execute();
-    my $row;
-    my %labels;
-    my @values;
-    while ($row = $conntypeidsth->fetchrow_arrayref()) {
-	push(@values, $row->[0]);
-	$labels{$row->[0]} = $row->[1];
-    }
-    $conntypeidsth->finish();
-    return popup_menu('conntypeid', \@values, $values[0], \%labels);
 }
 
 sub edit_device($) {
@@ -274,12 +221,12 @@ if ($command && $subcommand) {
 		case "rack" {
 		    $sth = $dbh->prepare("SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY room.name");
 		    $table->addRow("ID", "Name", "Description", "Room", "Notes");
-		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), select_roomid(), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
+		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), select_id_name($query_room_id_name,'roomid'), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
 		}
 		case "device" {
 		    $sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY rack.name");
 		    $table->addRow("ID", "Type", "Name", "Rack", "Description", "Notes");
-		    @addNewItemRow = ("", select_devtypeid(), textfield('name','name',20,80), select_rackid(), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
+		    @addNewItemRow = ("", select_id_name($query_device_type_id_name,'devtypeid'), textfield('name','name',20,80), select_id_name($query_rack_id_name,'rackid'), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
 		}
 		case "interface" {
 		    $sth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
