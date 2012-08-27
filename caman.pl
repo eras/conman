@@ -10,7 +10,7 @@ use CGI qw(:standard);
 # TODO
 # -editing rooms
 # -editing racks
-# -editing device info
+# -renaming devices
 
 # user editable variables begin
 my $dbfile = './cables.db';
