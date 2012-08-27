@@ -104,16 +104,16 @@ sub get_connection_list_for_interface($) {
     my @connlist;
     my ($id) = @_;
     my $connsth;
-    $connsth = $dbh->prepare("select device.name || '.' || interface.name from interface INNER JOIN device ON interface.device_id=device.id WHERE interface.id = ?");
-    $connsth->execute($id);
+    $connsth = $dbh->prepare("select device.name || '.' || interface.name from interface INNER JOIN device ON interface.device_id=device.id WHERE interface.id = (SELECT DISTINCT from_interface_id FROM linklist WHERE interface_id = ? OR from_interface_id = ?)");
+    $connsth->execute($id,$id);
     my $row;
     while ($row = $connsth->fetchrow_arrayref()) {
 	push(@connlist, $row->[0]);
     }
     $connsth->finish();
 
-    $connsth = $dbh->prepare("select device.name || '.' || interface.name from linklist INNER JOIN device ON interface.device_id=device.id INNER JOIN interface ON interface.id=linklist.interface_id WHERE linklist.from_interface_id = ? ORDER BY seq ASC");
-    $connsth->execute($id);
+    $connsth = $dbh->prepare("select device.name || '.' || interface.name from linklist INNER JOIN device ON interface.device_id=device.id INNER JOIN interface ON interface.id=linklist.interface_id WHERE linklist.from_interface_id = (SELECT DISTINCT from_interface_id FROM linklist WHERE interface_id = ? OR from_interface_id = ?) ORDER BY seq ASC");
+    $connsth->execute($id,$id);
     while ($row = $connsth->fetchrow_arrayref()) {
 	push(@connlist, $row->[0]);
     }
