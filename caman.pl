@@ -121,8 +121,8 @@ sub get_connection_list_for_interface($) {
     return @connlist;
 }
 
-sub select_id_name($$) {
-    my ($query, $selectname) = @_;
+sub select_id_name($$$) {
+    my ($query, $selectname, $default) = @_;
     my $tointidsth = $dbh->prepare($query);
     $tointidsth->execute();
     my $row;
@@ -134,23 +134,30 @@ sub select_id_name($$) {
 	$labels{$row->[0]} = $row->[1];
     }
     $tointidsth->finish();
-    return popup_menu($selectname, \@values, $values[0], \%labels);
+    if (!$default) {
+        $default=$values[0];
+    }
+    return popup_menu($selectname, \@values, $default, \%labels);
 }
 
 sub edit_device($) {
     my ($id) = @_;
-    my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ?");
+    my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes, device.rack_id, device.device_type_id FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ?");
     $devsth->execute($id);
 
     my $row;
-    while ($row = $devsth->fetchrow_arrayref()) {
+    print start_form(-method=>'get', -action=>"$scriptname");
+    if ($row = $devsth->fetchrow_arrayref()) {
 	print "<h2>$row->[2]</h2>\n";
-	print "Type: $row->[1]<br/>\n";
-	print "Rack: $row->[3]<br/>\n";
-	print "Description: $row->[4]<br/>\n";
-	print "Notes: $row->[5]<br/>\n";
+	print "Type: ".select_id_name($query_device_type_id_name,'devtypeid',$row->[7])."<br/>\n";
+	print "Rack: ".select_id_name($query_rack_id_name,'rackid',$row->[6])."<br/>\n";
+        print "Description: ".textfield('description',$row->[4], 40, 80)."<br/>\n";
+        print "Notes: ".textfield('notes',$row->[5], 40, 80)."<br/>\n";
     }    
     $devsth->finish();
+    print "<input type=\"hidden\" name=\"id\" value=\"$id\"/>\n";
+    print '<input type="hidden" name="command" value="edit"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'commit changes');
+    print end_form();
 
     print "<h3>Interfaces</h3>\n";
     print start_form(-method=>'get', -action=>"$scriptname");
@@ -170,7 +177,7 @@ sub edit_device($) {
     $devintsth->finish();
     $inttable->addRow((start_form(-method=>'get', -action=>"$scriptname")));
     my @addconnectionform;
-    @addconnectionform = ('', '', '', '', select_id_name($query_interface_id_name,'fromintid'), select_id_name($query_interface_id_name,'link1'), select_id_name($query_interface_id_name,'link2'), select_id_name($query_interface_id_name,'link3').hidden('fromintid',$row->[0]).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="connection"/>', submit('submit','add conn'));
+    @addconnectionform = ('', '', '', '', select_id_name($query_interface_id_name,'fromintid',0), select_id_name($query_interface_id_name,'link1',0), select_id_name($query_interface_id_name,'link2',0), select_id_name($query_interface_id_name,'link3',0).hidden('fromintid',$row->[0]).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="connection"/>', submit('submit','add conn'));
     $inttable->addRow(@addconnectionform);
     $inttable->addRow((end_form()));
     $inttable->print;
@@ -178,7 +185,7 @@ sub edit_device($) {
     print "<h4>Add a new interface</h4>\n";
     print start_form(-method=>'get', -action=>"$scriptname");
     $inttable = new HTML::Table();
-    $inttable->addRow(textfield('name','name',10,20), select_id_name($query_interface_type_id_name,'typeid'), textfield('notes','', 20,40), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="interface"/>'.hidden('deviceid',"$id").submit('submit', 'add'));
+    $inttable->addRow(textfield('name','name',10,20), select_id_name($query_interface_type_id_name,'typeid',0), textfield('notes','', 20,40), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="interface"/>'.hidden('deviceid',"$id").submit('submit', 'add'));
     $inttable->print;
     print end_form();
 }
@@ -218,12 +225,12 @@ if ($command && $subcommand) {
 		case "rack" {
 		    $sth = $dbh->prepare("SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY rack.name ASC");
 		    $table->addRow("ID", "Name", "Description", "Room", "Notes");
-		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), select_id_name($query_room_id_name,'roomid'), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
+		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), select_id_name($query_room_id_name,'roomid',0), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
 		}
 		case "device" {
 		    $sth = $dbh->prepare("SELECT device.id, device.name, device_type.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY device.name");
 		    $table->addRow("ID", "Name", "Type", "Rack", "Description", "Notes");
-		    @addNewItemRow = ("", textfield('name','name',20,80), select_id_name($query_device_type_id_name,'devtypeid'), select_id_name($query_rack_id_name,'rackid'), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
+		    @addNewItemRow = ("", textfield('name','name',20,80), select_id_name($query_device_type_id_name,'devtypeid',0), select_id_name($query_rack_id_name,'rackid',0), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
 		}
 		case "interface" {
 		    $sth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
@@ -380,6 +387,24 @@ if ($command && $subcommand) {
 	    if ($subcommand && $id) {
 		switch ($subcommand) {
 		    case "device" {
+                        my ($notes, $rackid, $devtypeid, $description) = (param('notes'), param('rackid'), param('devtypeid'), param('description'));
+                        if ($rackid && $devtypeid) {
+                            my $query = "UPDATE device SET rack_id=$rackid, device_type_id=$devtypeid";
+                            if ($notes) {
+                                $query = $query.", notes='$notes'";
+                            } else {
+                                $query = $query.", notes=''";
+                            }
+                            if ($description) {
+                                $query = $query.", description='$description'";
+                            } else {
+                                $query = $query.", description=''";
+                            }
+                            $query = $query." WHERE id = $id";
+         		    $sth = $dbh->prepare($query);
+	        	    $sth->execute();
+		            $sth->finish();
+                        }
 			edit_device($id);
 		    }
 		}
