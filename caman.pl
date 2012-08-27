@@ -134,6 +134,20 @@ sub select_devtypeid() {
     return popup_menu('devtypeid', \@values, $values[0], \%labels);
 }
 
+sub select_inttypeid() {
+    my $inttypeidsth = $dbh->prepare("select id, name from interface_type");
+    $inttypeidsth->execute();
+    my $row;
+    my %labels;
+    my @values;
+    while ($row = $inttypeidsth->fetchrow_arrayref()) {
+	push(@values, $row->[0]);
+	$labels{$row->[0]} = $row->[1];
+    }
+    $inttypeidsth->finish();
+    return popup_menu('typeid', \@values, $values[0], \%labels);
+}
+
 sub edit_device($) {
     my ($id) = @_;
     my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ?");
@@ -150,13 +164,16 @@ sub edit_device($) {
     $devsth->finish();
 
     print "<h3>Interfaces</h3>\n";
+    print start_form(-method=>'get', -action=>"$scriptname");
     my $inttable = new HTML::Table();
-    $inttable->addRow("ID", "Name", "Type");
-    my $devintsth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id WHERE interface.device_id = ? ORDER BY interface.name");
+    $inttable->addRow("ID", "Name", "Type", "Notes");
+    my $devintsth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id WHERE interface.device_id = ? ORDER BY interface.name");
     $devintsth->execute($id);
     while ($row = $devintsth->fetchrow_arrayref()) {
 	$inttable->addRow(@$row);
     }
+    $inttable->addRow("", textfield('name','name',10,20), select_inttypeid(), textfield('notes','', 20,40), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="interface"/>'.hidden('deviceid',"$id").submit('submit', 'add'));
+
     $devintsth->finish();
     $inttable->print;
 }
@@ -220,7 +237,7 @@ if ($command && $subcommand) {
 		    $row->[0] = "<a href=\"$scriptname?command=edit&subcommand=$subcommand&id=$id\">$id</a>";
 		    $table->addRow((@$row, "<a href=\"$scriptname?command=remove&subcommand=$subcommand&id=$id\">delete</a>"));
 		}
-		print start_form(-method=>'get', -action=>'caman.cgi');
+		print start_form(-method=>'get', -action=>"$scriptname");
 		$table->setRowHead(1);
 		if (@addNewItemRow) {
 		    $table->addRow(@addNewItemRow);
