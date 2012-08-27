@@ -221,8 +221,8 @@ if ($command && $subcommand) {
 		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), select_id_name($query_room_id_name,'roomid'), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
 		}
 		case "device" {
-		    $sth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY rack.name");
-		    $table->addRow("ID", "Type", "Name", "Rack", "Description", "Notes");
+		    $sth = $dbh->prepare("SELECT device.id, device.name, device_type.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY rack.name");
+		    $table->addRow("ID", "Name", "Type", "Rack", "Description", "Notes");
 		    @addNewItemRow = ("", select_id_name($query_device_type_id_name,'devtypeid'), textfield('name','name',20,80), select_id_name($query_rack_id_name,'rackid'), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
 		}
 		case "interface" {
@@ -239,7 +239,7 @@ if ($command && $subcommand) {
 		my $row;
 		while ($row = $sth->fetchrow_arrayref()) {
 		    my $id=$row->[0];
-		    $row->[2] = "<a href=\"$scriptname?command=edit&subcommand=$subcommand&id=$id\">$row->[2]</a>";
+		    $row->[1] = "<a href=\"$scriptname?command=edit&subcommand=$subcommand&id=$id\">$row->[1]</a>";
 		    $table->addRow((@$row, "<a href=\"$scriptname?command=remove&subcommand=$subcommand&id=$id\">delete</a>"));
 		}
 		print start_form(-method=>'get', -action=>"$scriptname");
