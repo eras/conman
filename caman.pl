@@ -22,6 +22,12 @@ my $query_device_type_id_name = "select id, name from device_type";
 my $query_room_id_name = "select id, name from room";
 my $query_rack_id_name = "select id, name from rack";
 
+my $query_list_room = "SELECT id, name, description, notes FROM room ORDER BY name ASC";
+my $query_list_rack = "SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY rack.name ASC";
+my $query_list_device = "SELECT device.id, device.name, device_type.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY device.name";
+my $query_list_interface = "SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC";
+my $query_list_connection = "SELECT i1.id, d1.name || '.' || i1.name, d2.name || '.' || i2.name, linklist.seq FROM interface AS i1, interface AS i2, linklist, device AS d1, device AS d2 WHERE linklist.from_interface_id = i1.id AND linklist.interface_id=i2.id AND i1.device_id=d1.id AND i2.device_id=d2.id ORDER BY d1.name, i1.name, linklist.seq";
+
 my $dbh;
 
 sub init_db() {
@@ -122,8 +128,35 @@ sub select_id_name($$$) {
     return popup_menu($selectname, \@values, $default, \%labels);
 }
 
+sub delete_connection($) {
+    my ($id) = @_;
+    my $delconnsth = $dbh->prepare("DELETE FROM linklist WHERE from_interface_id = (SELECT DISTINCT from_interface_id FROM linklist WHERE from_interface_id = ? OR interface_id = ?)");
+    $delconnsth->execute($id,$id);
+    $delconnsth->finish();
+}
+
 sub edit_device($) {
     my ($id) = @_;
+
+    my ($name, $notes, $rackid, $devtypeid, $description) = (param('name'), param('notes'), param('rackid'), param('devtypeid'), param('description'));
+    if ($name && $rackid && $devtypeid) {
+	my $query = "UPDATE device SET rack_id=$rackid, device_type_id=$devtypeid, name='$name'";
+	if ($notes) {
+	    $query = $query.", notes='$notes'";
+	} else {
+	    $query = $query.", notes=''";
+	}
+	if ($description) {
+	    $query = $query.", description='$description'";
+	} else {
+	    $query = $query.", description=''";
+	}
+	$query = $query." WHERE id = $id";
+	my $updatedevsth = $dbh->prepare($query);
+	$updatedevsth->execute();
+	$updatedevsth->finish();
+    }
+
     my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes, device.rack_id, device.device_type_id FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ?");
     $devsth->execute($id);
 
@@ -173,6 +206,10 @@ sub edit_device($) {
     print end_form();
 }
 
+##################################################################3
+# sub-routines end, main begins
+##################################################################3
+
 my $dsn = "dbi:SQLite:dbname=$dbfile";
 my $doinit = 0;
 
@@ -201,26 +238,26 @@ if ($command && $subcommand) {
 	    my @addNewItemRow;
 	    switch ($subcommand) {
 		case "room" {
-		    $sth = $dbh->prepare("SELECT id, name, description, notes FROM room ORDER BY name ASC");
+		    $sth = $dbh->prepare($query_list_room);
 		    $table->addRow("ID", "Name", "Description", "Notes");
 		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="room"/>'.submit('submit', 'add'));
 		}
 		case "rack" {
-		    $sth = $dbh->prepare("SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY rack.name ASC");
+		    $sth = $dbh->prepare($query_list_rack);
 		    $table->addRow("ID", "Name", "Description", "Room", "Notes");
 		    @addNewItemRow = ("", textfield('name','name',20,80), textfield('description','description', 40, 80), select_id_name($query_room_id_name,'roomid',0), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'add'));
 		}
 		case "device" {
-		    $sth = $dbh->prepare("SELECT device.id, device.name, device_type.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY device.name");
+		    $sth = $dbh->prepare($query_list_device);
 		    $table->addRow("ID", "Name", "Type", "Rack", "Description", "Notes");
 		    @addNewItemRow = ("", textfield('name','name',20,80), select_id_name($query_device_type_id_name,'devtypeid',0), select_id_name($query_rack_id_name,'rackid',0), textfield('description','description', 40, 80), textfield('notes', 'notes', 40, 80), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'add'));
 		}
 		case "interface" {
-		    $sth = $dbh->prepare("SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC");
+		    $sth = $dbh->prepare($query_list_interface);
 		    $table->addRow("ID", "Name", "Type", "Notes");
 		}
 		case "connection" {
-		    $sth = $dbh->prepare("SELECT i1.id, d1.name || '.' || i1.name, d2.name || '.' || i2.name, linklist.seq FROM interface AS i1, interface AS i2, linklist, device AS d1, device AS d2 WHERE linklist.from_interface_id = i1.id AND linklist.interface_id=i2.id AND i1.device_id=d1.id AND i2.device_id=d2.id ORDER BY d1.name, i1.name, linklist.seq");
+		    $sth = $dbh->prepare($query_list_connection);
 		    $table->addRow("Start if ID", "From", "Hops", "Seq");
 		}
 	    }
@@ -356,9 +393,7 @@ if ($command && $subcommand) {
 	    my $id = param('id');
 	    if ($subcommand && $id) {
 		if ($subcommand eq "connection") {
-		    $sth = $dbh->prepare("DELETE FROM linklist WHERE from_interface_id = (SELECT DISTINCT from_interface_id FROM linklist WHERE from_interface_id = ? OR interface_id = ?)");
-		    $sth->execute($id,$id);
-		    $sth->finish();
+		    delete_connection($id);
 		} else {
 		    $sth = $dbh->prepare("DELETE FROM $subcommand where id = ?");
 		    $sth->execute($id);
@@ -372,24 +407,6 @@ if ($command && $subcommand) {
 	    if ($subcommand && $id) {
 		switch ($subcommand) {
 		    case "device" {
-                        my ($name, $notes, $rackid, $devtypeid, $description) = (param('name'), param('notes'), param('rackid'), param('devtypeid'), param('description'));
-                        if ($rackid && $devtypeid) {
-                            my $query = "UPDATE device SET rack_id=$rackid, device_type_id=$devtypeid, name='$name'";
-                            if ($notes) {
-                                $query = $query.", notes='$notes'";
-                            } else {
-                                $query = $query.", notes=''";
-                            }
-                            if ($description) {
-                                $query = $query.", description='$description'";
-                            } else {
-                                $query = $query.", description=''";
-                            }
-                            $query = $query." WHERE id = $id";
-         		    $sth = $dbh->prepare($query);
-	        	    $sth->execute();
-		            $sth->finish();
-                        }
 			edit_device($id);
 		    }
 		}
