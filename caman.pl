@@ -138,6 +138,59 @@ sub delete_connection($) {
     $delconnsth->finish();
 }
 
+sub edit_rack($) {
+    my ($id) = @_;
+    
+    my ($name, $notes, $roomid, $description) = (param('name'), param('notes'), param('roomid'), param('description'));
+    if ($name && $roomid) {
+	my $query = "UPDATE rack SET room_id=$roomid, name='$name'";
+	if ($notes) {
+	    $query = $query.", notes='$notes'";
+	} else {
+	    $query = $query.", notes=''";
+	}
+	if ($description) {
+	    $query = $query.", description='$description'";
+	} else {
+	    $query = $query.", description=''";
+	}
+	$query = $query." WHERE id = $id";
+	my $updatedevsth = $dbh->prepare($query);
+	$updatedevsth->execute();
+	$updatedevsth->finish();
+    }
+
+    my $racksth = $dbh->prepare("SELECT id, name, room_id, description, notes FROM rack WHERE id = ?");
+    $racksth->execute($id);
+
+    my $row;
+    print start_form(-method=>'get', -action=>"$scriptname");
+    if ($row = $racksth->fetchrow_arrayref()) {
+	print "<h2>Rack: $row->[1]</h2>\n";
+        print "Name: ".textfield('name',$row->[1], 40, 80)."<br/>\n";
+	print "Room: ".select_id_name($query_room_id_name,'roomid',$row->[2])."<br/>\n";
+        print "Description: ".textfield('description',$row->[3], 40, 80)."<br/>\n";
+        print "Notes: ".textfield('notes',$row->[4], 40, 80)."<br/>\n";
+    }    
+    $racksth->finish();
+    print "<input type=\"hidden\" name=\"id\" value=\"$id\"/>\n";
+    print '<input type="hidden" name="command" value="edit"/><input type="hidden" name="subcommand" value="rack"/>'.submit('submit', 'commit changes');
+    print end_form();
+
+    print "<h3>Devices</h3>\n";
+    my $devtable = new HTML::Table();
+    $devtable->addRow("ID", "Name", "Type", "Description", "Notes");
+    my $devsth = $dbh->prepare("SELECT device.id, device.name, device_type.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id WHERE device.rack_id = ? ORDER BY device.name");
+    $devsth->execute($id);
+    while ($row = $devsth->fetchrow_arrayref()) {
+	my $devid = $row->[0];
+	$row->[1] = "<a href=\"$scriptname?command=edit&subcommand=device&id=$devid\">$row->[1]</a>";
+	$devtable->addRow(@$row, "<a href=\"$scriptname?command=remove&subcommand=interface&id=$devid\">delete device</a>");
+    }
+    $devsth->finish();
+    $devtable->print;
+}
+
 sub edit_device($) {
     my ($id) = @_;
 
@@ -409,6 +462,9 @@ if ($command && $subcommand) {
 	    my $id = param('id');
 	    if ($subcommand && $id) {
 		switch ($subcommand) {
+		    case "rack" {
+			edit_rack($id);
+		    }
 		    case "device" {
 			edit_device($id);
 		    }
