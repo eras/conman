@@ -350,6 +350,7 @@ if ($command && $subcommand) {
 		    }
 		}
 	    }
+	    print "click 'Back' and 'Refresh'<br/>\n";
 	}
 	case "remove" {
 	    my $id = param('id');
@@ -364,6 +365,7 @@ if ($command && $subcommand) {
 		    $sth->finish();
 		}
 	    }
+	    print "click 'Back' and 'Refresh'<br/>\n";
 	}
 	case "edit" {
 	    my $id = param('id');
