@@ -10,7 +10,6 @@ use CGI qw(:standard);
 # TODO
 # -editing rooms
 # -editing racks
-# -renaming devices
 
 # user editable variables begin
 my $dbfile = './cables.db';
@@ -131,7 +130,8 @@ sub edit_device($) {
     my $row;
     print start_form(-method=>'get', -action=>"$scriptname");
     if ($row = $devsth->fetchrow_arrayref()) {
-	print "<h2>$row->[2]</h2>\n";
+	print "<h2>Device: $row->[2]</h2>\n";
+        print "Name: ".textfield('name',$row->[2], 40, 80)."<br/>\n";
 	print "Type: ".select_id_name($query_device_type_id_name,'devtypeid',$row->[7])."<br/>\n";
 	print "Rack: ".select_id_name($query_rack_id_name,'rackid',$row->[6])."<br/>\n";
         print "Description: ".textfield('description',$row->[4], 40, 80)."<br/>\n";
@@ -370,9 +370,9 @@ if ($command && $subcommand) {
 	    if ($subcommand && $id) {
 		switch ($subcommand) {
 		    case "device" {
-                        my ($notes, $rackid, $devtypeid, $description) = (param('notes'), param('rackid'), param('devtypeid'), param('description'));
+                        my ($name, $notes, $rackid, $devtypeid, $description) = (param('name'), param('notes'), param('rackid'), param('devtypeid'), param('description'));
                         if ($rackid && $devtypeid) {
-                            my $query = "UPDATE device SET rack_id=$rackid, device_type_id=$devtypeid";
+                            my $query = "UPDATE device SET rack_id=$rackid, device_type_id=$devtypeid, name='$name'";
                             if ($notes) {
                                 $query = $query.", notes='$notes'";
                             } else {
