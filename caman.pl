@@ -51,6 +51,7 @@ sub init_db() {
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'KVM switch')");
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'blade chassis')");
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'webcam')");
+  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'terminal')");
 
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (copper)')");
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (fiber)')");
