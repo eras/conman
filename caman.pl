@@ -49,11 +49,14 @@ sub init_db() {
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'patch panel')");
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'wall sockets')");
   $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'KVM switch')");
+  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'blade chassis')");
+  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'webcam')");
 
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (copper)')");
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (fiber)')");
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Serial console')");
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'KVM')");
+  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'misc')");
 }
 
 sub print_header() {
