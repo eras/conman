@@ -51,23 +51,6 @@ sub init_db() {
   $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'KVM')");
 }
 
-sub print_help() {
-    print_help_list();
-    print_help_add();
-}
-
-sub print_help_list() {
-    print "caman.pl list (room|device|interface|rack|connection)\n";
-}
-
-sub print_help_add() {
-    print "caman.pl add room <name> [<description> [notes]]\n";
-    print "caman.pl add rack <name> <roomid> [<description> [notes]]\n";
-    print "caman.pl add device <name> <typeid> <rackid> [<description> [notes]]\n";
-    print "caman.pl add interface <name> <typeid> <deviceid> [notes]\n";
-    print "caman.pl add connection <fromintid> <tointid> <conntypeid> [notes]\n";
-}
-
 sub print_header() {
     print <<EOF;
 Content-Type: text/html; charset=UTF-8
