@@ -8,8 +8,8 @@ use HTML::Table;
 use CGI qw(:standard);
 
 # TODO
-# -editing rooms
-# -editing racks
+# -interface name on the interface list should direct to the device page?
+# -interface name on the connection list should direct to the device page?
 
 # user editable variables begin
 my $dbfile = './cables.db';
@@ -139,6 +139,58 @@ sub delete_connection($) {
     $delconnsth->finish();
 }
 
+sub edit_room($) {
+    my ($id) = @_;
+    
+    my ($name, $notes, $description) = (param('name'), param('notes'), param('description'));
+    if ($id && $name) {
+	my $query = "UPDATE room SET name='$name'";
+	if ($notes) {
+	    $query = $query.", notes='$notes'";
+	} else {
+	    $query = $query.", notes=''";
+	}
+	if ($description) {
+	    $query = $query.", description='$description'";
+	} else {
+	    $query = $query.", description=''";
+	}
+	$query = $query." WHERE id = $id";
+	my $updateroomsth = $dbh->prepare($query);
+	$updateroomsth->execute();
+	$updateroomsth->finish();
+    }
+
+    my $roomsth = $dbh->prepare("SELECT id, name, description, notes FROM room WHERE id = ?");
+    $roomsth->execute($id);
+
+    my $row;
+    print start_form(-method=>'get', -action=>"$scriptname");
+    if ($row = $roomsth->fetchrow_arrayref()) {
+	print "<h2>Room: $row->[1]</h2>\n";
+        print "Name: ".textfield('name',$row->[1], 40, 80)."<br/>\n";
+        print "Description: ".textfield('description',$row->[2], 40, 80)."<br/>\n";
+        print "Notes: ".textfield('notes',$row->[3], 40, 80)."<br/>\n";
+    }    
+    $roomsth->finish();
+    print "<input type=\"hidden\" name=\"id\" value=\"$id\"/>\n";
+    print '<input type="hidden" name="command" value="edit"/><input type="hidden" name="subcommand" value="room"/>'.submit('submit', 'commit changes');
+    print end_form();
+
+    print "<h3>Racks</h3>\n";
+    my $racktable = new HTML::Table();
+    $racktable->addRow("ID", "Name", "Description", "Notes");
+    my $racksth = $dbh->prepare("SELECT id, name, description, notes FROM rack WHERE room_id = ? ORDER BY name");
+    $racksth->execute($id);
+    while ($row = $racksth->fetchrow_arrayref()) {
+	my $rackid = $row->[0];
+	$row->[1] = "<a href=\"$scriptname?command=edit&subcommand=rack&id=$rackid\">$row->[1]</a>";
+	$racktable->addRow(@$row, "<a href=\"$scriptname?command=remove&subcommand=rack&id=$rackid\">delete rack</a>");
+    }
+    $racksth->finish();
+    $racktable->print;
+}
+
 sub edit_rack($) {
     my ($id) = @_;
     
@@ -156,9 +208,9 @@ sub edit_rack($) {
 	    $query = $query.", description=''";
 	}
 	$query = $query." WHERE id = $id";
-	my $updatedevsth = $dbh->prepare($query);
-	$updatedevsth->execute();
-	$updatedevsth->finish();
+	my $updateracksth = $dbh->prepare($query);
+	$updateracksth->execute();
+	$updateracksth->finish();
     }
 
     my $racksth = $dbh->prepare("SELECT id, name, room_id, description, notes FROM rack WHERE id = ?");
@@ -186,7 +238,7 @@ sub edit_rack($) {
     while ($row = $devsth->fetchrow_arrayref()) {
 	my $devid = $row->[0];
 	$row->[1] = "<a href=\"$scriptname?command=edit&subcommand=device&id=$devid\">$row->[1]</a>";
-	$devtable->addRow(@$row, "<a href=\"$scriptname?command=remove&subcommand=interface&id=$devid\">delete device</a>");
+	$devtable->addRow(@$row, "<a href=\"$scriptname?command=remove&subcommand=device&id=$devid\">delete device</a>");
     }
     $devsth->finish();
     $devtable->print;
@@ -463,6 +515,9 @@ if ($command && $subcommand) {
 	    my $id = param('id');
 	    if ($subcommand && $id) {
 		switch ($subcommand) {
+		    case "room" {
+			edit_room($id);
+		    }
 		    case "rack" {
 			edit_rack($id);
 		    }
