@@ -7,10 +7,6 @@ use Switch;
 use HTML::Table;
 use CGI qw(:standard);
 
-# TODO
-# -interface name on the interface list should direct to the device page?
-# -interface name on the connection list should direct to the device page?
-
 # user editable variables begin
 my $dbfile = './cables.db';
 my $scriptname = 'caman.cgi';
@@ -315,6 +311,20 @@ sub edit_device($) {
     print end_form();
 }
 
+sub device_id_for_interface($) {
+    my ($id) = @_;
+
+    my $devid;
+    my $row;
+    my $devsth = $dbh->prepare("SELECT device_id FROM interface WHERE id = ?");
+    $devsth->execute($id);
+    while ($row = $devsth->fetchrow_arrayref()) {
+	$devid = $row->[0];
+    }
+    $devsth->finish();
+    return $devid;
+}
+
 ##################################################################3
 # sub-routines end, main begins
 ##################################################################3
@@ -523,6 +533,12 @@ if ($command && $subcommand) {
 		    }
 		    case "device" {
 			edit_device($id);
+		    }
+		    case "interface" {
+			edit_device(device_id_for_interface($id));
+		    }
+		    case "connection" {
+			edit_device(device_id_for_interface($id));
 		    }
 		}
 	    }
