@@ -1,5 +1,5 @@
-CableManager
-------------
+ConnectionManager
+-----------------
 
 1. License
 
@@ -7,7 +7,7 @@ CableManager
 
 2. Installation
 
-  2.1  Install the dependencies needed by CableManager
+  2.1  Install the dependencies needed by ConnectionManager
        - Perl
        - SQLite3
        - SQLite3 Perl bindings
@@ -17,10 +17,10 @@ CableManager
   2.2  Copy the caman.cgi file to a directory accessible by your web server,
        i.e. Apache HTTPD. We'll call this directory INSTALLPATH.
   2.3  Select a location (path) under your web server where the application
-       should be visible, i.e. /cablemanager. We'll call this location
+       should be visible, i.e. /ConnectionManager. We'll call this location
        LOCATION.
   2.4  Enable running CGI programs in your web server.
-  2.5  Select a directory where the CableManager stores its database. This
+  2.5  Select a directory where the ConnectionManager stores its database. This
        directory must be writable by the web server. The default is
        INSTALLPATH.
   2.6  Edit the settings (script name and database location) in the
@@ -28,10 +28,10 @@ CableManager
   2.7  Edit your web server configuration to enable running CGI programs in
        INSTALLPATH and point LOCATION to INSTALLPATH
 
-       Apache example (INSTALLPATH=/web/cablemanager, LOCATION=/cablemanager):
+       Apache example (INSTALLPATH=/web/ConnectionManager, LOCATION=/ConnectionManager):
 
-       ScriptAlias /cablemanager/ /web/cablemanager/
-       <Directory "/web/cablemanager">
+       ScriptAlias /ConnectionManager/ /web/ConnectionManager/
+       <Directory "/web/ConnectionManager">
          AllowOverride None
          Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
          Order allow,deny
@@ -41,11 +41,11 @@ CableManager
   2.8  Enable authentication in your web server if wanted
   
        Apache example:
-       <Location /cablemanager>
+       <Location /ConnectionManager>
          AuthType Basic
-         AuthName CableManager
+         AuthName ConnectionManager
          # the password file should not be reacheable via HTTP!
-         AuthUserFile /web/passwords/cablemanager.passwd
+         AuthUserFile /web/passwords/ConnectionManager.passwd
          require valid-user
        </Location>
 
@@ -59,12 +59,12 @@ CableManager
   3.3 Add a device to the rack (at the rack view)
   3.4 Add interfaces to the device (at the device view)
   3.5 Add connections to the interface (at the device view)
-    3.5.1 CableManager currently supports at most four (4) hops per
+    3.5.1 ConnectionManager currently supports at most four (4) hops per
           connection, but you may use less if needed
   3.6 Try to cope with all the small glitches
 
 4. Author
 
-  Tapio Vuorinen, cablemanager@imordnilap.net. Bug reports and feature
+  Tapio Vuorinen, connectionmanager@imordnilap.net. Bug reports and feature
   requests are read. If you want to participate in the development (what?),
   let me know.

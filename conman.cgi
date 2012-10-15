@@ -9,7 +9,7 @@ use CGI qw(:standard);
 
 # user editable variables begin
 my $dbfile = './cables.db';
-my $scriptname = 'caman.cgi';
+my $scriptname = 'conman.cgi';
 # user editable variables end
 
 my $query_interface_id_name = "SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON device.id = interface.device_id ORDER BY device.name ASC, interface.name ASC";
