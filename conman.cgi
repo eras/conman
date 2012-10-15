@@ -62,7 +62,7 @@ Content-Type: text/html; charset=UTF-8
 
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
 <html>
-<head><title>Modeemi CableManager</title></head>
+<head><title>ConnectionManager</title></head>
 <body>
 EOF
 }
