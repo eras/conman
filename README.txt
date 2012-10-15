@@ -63,7 +63,13 @@ ConnectionManager
           connection, but you may use less if needed
   3.6 Try to cope with all the small glitches
 
-4. Author
+4. Distribution
+
+  You can clone http://git.imordnilap.net/conman.git. Development repository
+  is located elsewhere and changes will be pushed to the public repo once per
+  day.
+
+5. Author
 
   Tapio Vuorinen, connectionmanager@imordnilap.net. Bug reports and feature
   requests are read. If you want to participate in the development (what?),
