@@ -14,7 +14,7 @@ ConnectionManager
        - Perl CGI
        - Perl DBI
        - Perl HTML::Table
-  2.2  Copy the caman.cgi file to a directory accessible by your web server,
+  2.2  Copy the conman.cgi file to a directory accessible by your web server,
        i.e. Apache HTTPD. We'll call this directory INSTALLPATH.
   2.3  Select a location (path) under your web server where the application
        should be visible, i.e. /ConnectionManager. We'll call this location
@@ -24,7 +24,7 @@ ConnectionManager
        directory must be writable by the web server. The default is
        INSTALLPATH.
   2.6  Edit the settings (script name and database location) in the
-       caman.cgi script to match your setup
+       conman.cgi script to match your setup
   2.7  Edit your web server configuration to enable running CGI programs in
        INSTALLPATH and point LOCATION to INSTALLPATH
 
