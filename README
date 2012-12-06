@@ -65,9 +65,7 @@ ConnectionManager
 
 4. Distribution
 
-  You can clone http://git.imordnilap.net/conman.git. Development repository
-  is located elsewhere and changes will be pushed to the public repo once per
-  day.
+  git@github.com:delic/conman.git
 
 5. Author
 
