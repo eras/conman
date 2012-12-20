@@ -511,12 +511,30 @@ if ($command && $subcommand) {
 	case "remove" {
 	    my $id = param('id');
 	    if ($subcommand && $id) {
-		if ($subcommand eq "connection") {
-		    delete_connection($id);
-		} else {
-		    $sth = $dbh->prepare("DELETE FROM $subcommand where id = ?");
-		    $sth->execute($id);
-		    $sth->finish();
+		switch ($subcommand) {
+		    case "room" {
+			$sth = $dbh->prepare("DELETE FROM room where id = ?");
+			$sth->execute($id);
+			$sth->finish();
+		    }
+		    case "rack" {
+			$sth = $dbh->prepare("DELETE FROM rack where id = ?");
+			$sth->execute($id);
+			$sth->finish();
+		    }
+		    case "device" {
+			$sth = $dbh->prepare("DELETE FROM device where id = ?");
+			$sth->execute($id);
+			$sth->finish();
+		    }
+		    case "interface" {
+			$sth = $dbh->prepare("DELETE FROM interface where id = ?");
+			$sth->execute($id);
+			$sth->finish();
+		    }
+		    case "connection" {
+			delete_connection($id);
+		    }
 		}
 	    }
 	    print "click 'Back' and 'Refresh'<br/>\n";
