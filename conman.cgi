@@ -10,6 +10,7 @@ use CGI qw(:standard);
 # user editable variables begin
 my $dbfile = './cables.db';
 my $scriptname = 'conman.cgi';
+my $readonlymode = 0;
 # user editable variables end
 
 my $query_interface_id_name = "SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON device.id = interface.device_id ORDER BY device.name ASC, interface.name ASC";
@@ -27,33 +28,36 @@ my $query_list_connection = "SELECT i1.id, d1.name || '.' || i1.name, d2.name ||
 my $dbh;
 
 sub init_db() {
-  $dbh->do("CREATE TABLE device_type(id INTEGER PRIMARY KEY, name TEXT NOT NULL)");
-  $dbh->do("CREATE TABLE room(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''), description TEXT, notes TEXT)");
-  $dbh->do("CREATE TABLE rack(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''), description TEXT, room_id INT, notes TEXT, FOREIGN KEY(room_id) REFERENCES room(id))");
-  $dbh->do("CREATE TABLE device(id INTEGER PRIMARY KEY AUTOINCREMENT, device_type_id INT, name TEXT NOT NULL  CHECK (NOT name = ''), description TEXT, rack_id INT, notes TEXT, FOREIGN KEY(rack_id) REFERENCES rack(id), FOREIGN KEY(device_type_id) REFERENCES device_type(id))");
-  $dbh->do("CREATE TABLE interface_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''))");
-  $dbh->do("CREATE TABLE interface(id INTEGER PRIMARY KEY AUTOINCREMENT, interface_type_id INT, name TEXT NOT NULL CHECK (NOT name = ''), device_id INT, notes TEXT, FOREIGN KEY(interface_type_id) REFERENCES interface_type(id), FOREIGN KEY(device_id) REFERENCES device(id))");
-
-  $dbh->do("CREATE TABLE linklist(".
-    "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, interface_id INT UNIQUE, seq INT NOT NULL, ".
-    "FOREIGN KEY(from_interface_id) REFERENCES interface(id), ".
-    "FOREIGN KEY(interface_id) REFERENCES interface(id), ".
-    "CHECK (NOT from_interface_id = interface_id))");
-
-  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'switch')");
-  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'computer')");
-  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'patch panel')");
-  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'wall sockets')");
-  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'KVM switch')");
-  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'blade chassis')");
-  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'webcam')");
-  $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'terminal')");
-
-  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (copper)')");
-  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (fiber)')");
-  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Serial console')");
-  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'KVM')");
-  $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'misc')");
+    if ($readonlymode == 0) {
+	return;
+    }
+    $dbh->do("CREATE TABLE device_type(id INTEGER PRIMARY KEY, name TEXT NOT NULL)");
+    $dbh->do("CREATE TABLE room(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''), description TEXT, notes TEXT)");
+    $dbh->do("CREATE TABLE rack(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''), description TEXT, room_id INT, notes TEXT, FOREIGN KEY(room_id) REFERENCES room(id))");
+    $dbh->do("CREATE TABLE device(id INTEGER PRIMARY KEY AUTOINCREMENT, device_type_id INT, name TEXT NOT NULL  CHECK (NOT name = ''), description TEXT, rack_id INT, notes TEXT, FOREIGN KEY(rack_id) REFERENCES rack(id), FOREIGN KEY(device_type_id) REFERENCES device_type(id))");
+    $dbh->do("CREATE TABLE interface_type(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL CHECK (NOT name = ''))");
+    $dbh->do("CREATE TABLE interface(id INTEGER PRIMARY KEY AUTOINCREMENT, interface_type_id INT, name TEXT NOT NULL CHECK (NOT name = ''), device_id INT, notes TEXT, FOREIGN KEY(interface_type_id) REFERENCES interface_type(id), FOREIGN KEY(device_id) REFERENCES device(id))");
+    
+    $dbh->do("CREATE TABLE linklist(".
+	     "id INTEGER PRIMARY KEY AUTOINCREMENT, from_interface_id INT, interface_id INT UNIQUE, seq INT NOT NULL, ".
+	     "FOREIGN KEY(from_interface_id) REFERENCES interface(id), ".
+	     "FOREIGN KEY(interface_id) REFERENCES interface(id), ".
+	     "CHECK (NOT from_interface_id = interface_id))");
+    
+    $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'switch')");
+    $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'computer')");
+    $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'patch panel')");
+    $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'wall sockets')");
+    $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'KVM switch')");
+    $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'blade chassis')");
+    $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'webcam')");
+    $dbh->do("INSERT INTO device_type (id, name) VALUES (null, 'terminal')");
+    
+    $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (copper)')");
+    $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Ethernet (fiber)')");
+    $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'Serial console')");
+    $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'KVM')");
+    $dbh->do("INSERT INTO interface_type (id, name) VALUES (null, 'misc')");
 }
 
 sub print_header() {
@@ -130,9 +134,11 @@ sub select_id_name($$$) {
 
 sub delete_connection($) {
     my ($id) = @_;
-    my $delconnsth = $dbh->prepare("DELETE FROM linklist WHERE from_interface_id = (SELECT DISTINCT from_interface_id FROM linklist WHERE from_interface_id = ? OR interface_id = ?)");
-    $delconnsth->execute($id,$id);
-    $delconnsth->finish();
+    if ($readonlymode == 0) {
+	my $delconnsth = $dbh->prepare("DELETE FROM linklist WHERE from_interface_id = (SELECT DISTINCT from_interface_id FROM linklist WHERE from_interface_id = ? OR interface_id = ?)");
+	$delconnsth->execute($id,$id);
+	$delconnsth->finish();
+    }
 }
 
 sub edit_room($) {
@@ -152,9 +158,11 @@ sub edit_room($) {
 	    $query = $query.", description=''";
 	}
 	$query = $query." WHERE id = $id";
-	my $updateroomsth = $dbh->prepare($query);
-	$updateroomsth->execute();
-	$updateroomsth->finish();
+	if ($readonlymode == 0) {
+	    my $updateroomsth = $dbh->prepare($query);
+	    $updateroomsth->execute();
+	    $updateroomsth->finish();
+	}
     }
 
     my $roomsth = $dbh->prepare("SELECT id, name, description, notes FROM room WHERE id = ?");
@@ -204,9 +212,11 @@ sub edit_rack($) {
 	    $query = $query.", description=''";
 	}
 	$query = $query." WHERE id = $id";
-	my $updateracksth = $dbh->prepare($query);
-	$updateracksth->execute();
-	$updateracksth->finish();
+	if ($readonlymode == 0) {
+	    my $updateracksth = $dbh->prepare($query);
+	    $updateracksth->execute();
+	    $updateracksth->finish();
+	}
     }
 
     my $racksth = $dbh->prepare("SELECT id, name, room_id, description, notes FROM rack WHERE id = ?");
@@ -257,9 +267,11 @@ sub edit_device($) {
 	    $query = $query.", description=''";
 	}
 	$query = $query." WHERE id = $id";
-	my $updatedevsth = $dbh->prepare($query);
-	$updatedevsth->execute();
-	$updatedevsth->finish();
+	if ($readonlymode == 0) {
+	    my $updatedevsth = $dbh->prepare($query);
+	    $updatedevsth->execute();
+	    $updatedevsth->finish();
+	}
     }
 
     my $devsth = $dbh->prepare("SELECT device.id, device_type.name, device.name, rack.name, device.description, device.notes, device.rack_id, device.device_type_id FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id WHERE device.id = ?");
@@ -417,9 +429,11 @@ if ($command && $subcommand) {
 			    $values = $values.",'".$notes."'";
 			}
 			$query = $query.") VALUES ".$values.")";
-			$sth = $dbh->prepare($query);
-			$sth->execute();
-			$sth->finish();
+			if ($readonlymode == 0) {
+			    $sth = $dbh->prepare($query);
+			    $sth->execute();
+			    $sth->finish();
+			}
 		    }
 		}
 		# add rack <name> <roomid> [<description> [notes]]
@@ -440,9 +454,11 @@ if ($command && $subcommand) {
 			    $values = $values.",'".$notes."'";
 			}
 			$query = $query.") VALUES ".$values.")";
-			$sth = $dbh->prepare($query);
-			$sth->execute();
-			$sth->finish();
+			if ($readonlymode == 0) {
+			    $sth = $dbh->prepare($query);
+			    $sth->execute();
+			    $sth->finish();
+			}
 		    }
 		}
 		# add device <name> <devtypeid> <rackid> [<description> [notes]]
@@ -464,9 +480,11 @@ if ($command && $subcommand) {
 			    $values = $values.",'".$notes."'";
 			}
 			$query = $query.") VALUES ".$values.")";
-			$sth = $dbh->prepare($query);
-			$sth->execute();
-			$sth->finish();
+			if ($readonlymode == 0) {
+			    $sth = $dbh->prepare($query);
+			    $sth->execute();
+			    $sth->finish();
+			}
 		    }
 		}
 		# add interface <name> <typeid> <deviceid> [notes]
@@ -483,9 +501,11 @@ if ($command && $subcommand) {
 			    $values = $values.",'".$notes."'";
 			}
 			$query = $query.") VALUES ".$values.")";
-			$sth = $dbh->prepare($query);
-			$sth->execute();
-			$sth->finish();
+			if ($readonlymode == 0) {
+			    $sth = $dbh->prepare($query);
+			    $sth->execute();
+			    $sth->finish();
+			}
 		    }
 		}
 		# add connection <fromintid> <tointid> <conntypeid> [notes]
@@ -498,9 +518,11 @@ if ($command && $subcommand) {
 				my $query = "INSERT INTO linklist (from_interface_id, interface_id, seq";
 				my $values = "('".$fromintid."',".$link.",".$i;
 				$query = $query.") VALUES ".$values.")";
-				$sth = $dbh->prepare($query);
-				$sth->execute();
-				$sth->finish();
+				if ($readonlymode == 0) {
+				    $sth = $dbh->prepare($query);
+				    $sth->execute();
+				    $sth->finish();
+				}
 			    }
 			}
 		    }
@@ -510,7 +532,7 @@ if ($command && $subcommand) {
 	}
 	case "remove" {
 	    my $id = param('id');
-	    if ($subcommand && $id) {
+	    if ($subcommand && $id && ($readonlymode == 0)) {
 		switch ($subcommand) {
 		    case "room" {
 			$sth = $dbh->prepare("DELETE FROM room where id = ?");
