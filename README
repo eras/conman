@@ -63,7 +63,14 @@ ConnectionManager
           connection, but you may use less if needed
   3.6 Try to cope with all the small glitches
 
-4. Distribution
+4. Read-only mode
+
+  In case you want to have a read-only view of the data, install another
+  copy of conman.cgi somewhere appropriate, configure it to use the same
+  database file as the r/w version and set $readonlymode = 1; at the editable
+  variables section.
+
+5. Distribution
 
   git@github.com:delic/conman.git
 
