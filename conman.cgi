@@ -85,6 +85,15 @@ sub print_navigation() {
     print "</center>\n";
 }
 
+sub print_refresh_javascript($) {
+    my ($params) = @_;
+    print "<script type=\"text/javascript\">\n".
+	"<!--\n".
+	"window.location = \"$scriptname?$params\"\n".
+	"//-->\n".
+	"</script>\n";
+}
+
 sub print_footer() {
     print <<EOF;
 </body>
@@ -435,6 +444,7 @@ if ($command && $subcommand) {
 			    $sth->finish();
 			}
 		    }
+		    print_refresh_javascript("command=list&subcommand=room");
 		}
 		# add rack <name> <roomid> [<description> [notes]]
 		case "rack" {
@@ -460,6 +470,7 @@ if ($command && $subcommand) {
 			    $sth->finish();
 			}
 		    }
+		    print_refresh_javascript("command=list&subcommand=rack");
 		}
 		# add device <name> <devtypeid> <rackid> [<description> [notes]]
 		case "device" {
@@ -486,6 +497,7 @@ if ($command && $subcommand) {
 			    $sth->finish();
 			}
 		    }
+		    print_refresh_javascript("command=list&subcommand=device");
 		}
 		# add interface <name> <typeid> <deviceid> [notes]
 		case "interface" {
@@ -507,6 +519,7 @@ if ($command && $subcommand) {
 			    $sth->finish();
 			}
 		    }
+		    print_refresh_javascript("command=edit&subcommand=device&id=$deviceid");
 		}
 		# add connection <fromintid> <tointid> <conntypeid> [notes]
 		case "connection" {
@@ -526,9 +539,9 @@ if ($command && $subcommand) {
 			    }
 			}
 		    }
+		    print_refresh_javascript("command=edit&subcommand=device&id=".device_id_for_interface($fromintid));
 		}
 	    }
-	    print "click 'Back' and 'Refresh'<br/>\n";
 	}
 	case "remove" {
 	    my $id = param('id');
@@ -538,28 +551,33 @@ if ($command && $subcommand) {
 			$sth = $dbh->prepare("DELETE FROM room where id = ?");
 			$sth->execute($id);
 			$sth->finish();
+			print_refresh_javascript("command=list&subcommand=room");
 		    }
 		    case "rack" {
 			$sth = $dbh->prepare("DELETE FROM rack where id = ?");
 			$sth->execute($id);
 			$sth->finish();
+			print_refresh_javascript("command=list&subcommand=rack");
 		    }
 		    case "device" {
 			$sth = $dbh->prepare("DELETE FROM device where id = ?");
 			$sth->execute($id);
 			$sth->finish();
+			print_refresh_javascript("command=list&subcommand=device");
 		    }
 		    case "interface" {
+			my $devid = device_id_for_interface($id);
 			$sth = $dbh->prepare("DELETE FROM interface where id = ?");
 			$sth->execute($id);
 			$sth->finish();
+			print_refresh_javascript("command=edit&subcommand=device&id=$devid");
 		    }
 		    case "connection" {
 			delete_connection($id);
+			print "Click 'Back' and 'Refresh'<br/>\n";
 		    }
 		}
 	    }
-	    print "click 'Back' and 'Refresh'<br/>\n";
 	}
 	case "edit" {
 	    my $id = param('id');
