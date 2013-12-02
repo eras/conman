@@ -28,7 +28,7 @@ my $query_list_connection = "SELECT i1.id, d1.name || '.' || i1.name, d2.name ||
 my $dbh;
 
 sub init_db() {
-    if ($readonlymode == 0) {
+    if ($readonlymode == 1) {
 	return;
     }
     $dbh->do("CREATE TABLE device_type(id INTEGER PRIMARY KEY, name TEXT NOT NULL)");
