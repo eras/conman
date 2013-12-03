@@ -13,6 +13,8 @@ my $scriptname = 'conman.cgi';
 my $readonlymode = 0;
 # user editable variables end
 
+my $MAXHOPS = 4; # changing this requires changes also to html (link1, link2, ... link[MAXHOPS-1])
+
 my $query_interface_id_name = "SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON device.id = interface.device_id ORDER BY device.name ASC, interface.name ASC";
 my $query_interface_type_id_name = "select id, name from interface_type";
 my $query_device_type_id_name = "select id, name from device_type";
@@ -184,7 +186,7 @@ sub edit_room($) {
         print "Name: ".textfield('name',$row->[1], 40, 80)."<br/>\n";
         print "Description: ".textfield('description',$row->[2], 40, 80)."<br/>\n";
         print "Notes: ".textfield('notes',$row->[3], 40, 80)."<br/>\n";
-    }    
+    }
     $roomsth->finish();
     print "<input type=\"hidden\" name=\"id\" value=\"$id\"/>\n";
     print '<input type="hidden" name="command" value="edit"/><input type="hidden" name="subcommand" value="room"/>'.submit('submit', 'commit changes');
@@ -295,7 +297,7 @@ sub edit_device($) {
 	print "Rack: ".select_id_name($query_rack_id_name,'rackid',$row->[6])."<br/>\n";
         print "Description: ".textfield('description',$row->[4], 40, 80)."<br/>\n";
         print "Notes: ".textfield('notes',$row->[5], 40, 80)."<br/>\n";
-    }    
+    }
     $devsth->finish();
     print "<input type=\"hidden\" name=\"id\" value=\"$id\"/>\n";
     print '<input type="hidden" name="command" value="edit"/><input type="hidden" name="subcommand" value="device"/>'.submit('submit', 'commit changes');
@@ -309,11 +311,19 @@ sub edit_device($) {
     $devintsth->execute($id);
     while ($row = $devintsth->fetchrow_arrayref()) {
 	my @connections;
+	my @addhopform;
 	@connections = get_connection_list_for_interface($row->[0]);
+	if (@connections < $MAXHOPS) {
+	    $inttable->addRow((start_form(-method=>'get', -action=>"$scriptname")));
+	    push(@addhopform, (select_id_name($query_interface_id_name,'hopid',0).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="hop"/><input type="hidden" name="fromintid" value="'.$row->[0].'"/><input type="hidden" name="seq" value="'.(@connections+1).'"/>', submit('submit','add hop')));
+	}
 	if (@connections > 1) {
-	    $inttable->addRow(@$row, @connections, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
+	    $inttable->addRow(@$row, @connections, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
 	} else {
-	    $inttable->addRow(@$row, "<a href=\"$scriptname?command=remove&subcommand=interface&id=$row->[0]\">delete interface</a>");
+	    $inttable->addRow(@$row, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=interface&id=$row->[0]\">delete interface</a>");
+	}
+	if (@connections < $MAXHOPS) {
+	    $inttable->addRow((end_form()));
 	}
     }
     $devintsth->finish();
@@ -525,7 +535,7 @@ if ($command && $subcommand) {
 		case "connection" {
 		    my $fromintid = param('fromintid');
 		    if ($fromintid) {
-			for (my $i = 1;$i < 4;$i++) {
+			for (my $i = 1;$i < $MAXHOPS;$i++) {
 			    my $link = param("link$i");
 			    if ($link) {
 				my $query = "INSERT INTO linklist (from_interface_id, interface_id, seq";
@@ -538,6 +548,19 @@ if ($command && $subcommand) {
 				}
 			    }
 			}
+		    }
+		    print_refresh_javascript("command=edit&subcommand=device&id=".device_id_for_interface($fromintid));
+		}
+		case "hop" {
+		    my $fromintid = param('fromintid');
+		    my $seq = param('seq');
+		    my $hopid = param('hopid');
+
+		    my $query = "INSERT INTO linklist (from_interface_id, interface_id, seq) VALUES (?, ?, ?)";
+		    if ($readonlymode == 0) {
+			$sth = $dbh->prepare($query);
+			$sth->execute($fromintid, $hopid, $seq);
+			$sth->finish();
 		    }
 		    print_refresh_javascript("command=edit&subcommand=device&id=".device_id_for_interface($fromintid));
 		}
