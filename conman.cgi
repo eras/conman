@@ -124,6 +124,21 @@ sub get_connection_list_for_interface($) {
     return @connlist;
 }
 
+sub get_from_interface_id_for_interface($) {
+    my ($id) = @_;
+    # return self if nothing else found
+    my $from_interface_id = $id;
+
+    my $ifsth = $dbh->prepare("SELECT from_interface_id FROM linklist WHERE interface_id = ? OR from_interface_id = ?");
+    $ifsth->execute($id, $id);
+    my $row;
+    while ($row = $ifsth->fetchrow_arrayref()) {
+	$from_interface_id = $row->[0];
+    }
+    $ifsth->finish();
+    return $from_interface_id;
+}
+
 sub select_id_name($$$) {
     my ($query, $selectname, $default) = @_;
     my $tointidsth = $dbh->prepare($query);
@@ -321,7 +336,7 @@ sub edit_device($) {
 		$seq = 1;
 	    }
 	    $inttable->addRow((start_form(-method=>'get', -action=>"$scriptname")));
-	    push(@addhopform, (select_id_name($query_interface_id_name,'hopid',0).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="hop"/><input type="hidden" name="fromintid" value="'.$row->[0].'"/><input type="hidden" name="seq" value="'.$seq.'"/>', submit('submit','add hop')));
+	    push(@addhopform, (select_id_name($query_interface_id_name,'hopid',0).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="hop"/><input type="hidden" name="fromintid" value="'.get_from_interface_id_for_interface($row->[0]).'"/><input type="hidden" name="seq" value="'.$seq.'"/>', submit('submit','add hop')));
 	}
 	if (@connections > 1) {
 	    $inttable->addRow(@$row, @connections, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
