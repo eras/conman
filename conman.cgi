@@ -314,8 +314,14 @@ sub edit_device($) {
 	my @addhopform;
 	@connections = get_connection_list_for_interface($row->[0]);
 	if (@connections < $MAXHOPS) {
+	    my $seq = @connections;
+	    # if there are no connections from the starting point, @collections == 0
+	    # if there is one, @collections == 2, hence the following ugly hack
+	    if ($seq == 0) {
+		$seq = 1;
+	    }
 	    $inttable->addRow((start_form(-method=>'get', -action=>"$scriptname")));
-	    push(@addhopform, (select_id_name($query_interface_id_name,'hopid',0).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="hop"/><input type="hidden" name="fromintid" value="'.$row->[0].'"/><input type="hidden" name="seq" value="'.(@connections+1).'"/>', submit('submit','add hop')));
+	    push(@addhopform, (select_id_name($query_interface_id_name,'hopid',0).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="hop"/><input type="hidden" name="fromintid" value="'.$row->[0].'"/><input type="hidden" name="seq" value="'.$seq.'"/>', submit('submit','add hop')));
 	}
 	if (@connections > 1) {
 	    $inttable->addRow(@$row, @connections, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
