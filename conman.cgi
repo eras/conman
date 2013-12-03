@@ -576,14 +576,94 @@ if ($command && $subcommand) {
 		    my $fromintid = param('fromintid');
 		    my $seq = param('seq');
 		    my $hopid = param('hopid');
+		    my $finished = 0;
 
-		    my $query = "INSERT INTO linklist (from_interface_id, interface_id, seq) VALUES (?, ?, ?)";
-		    if ($readonlymode == 0) {
-			$sth = $dbh->prepare($query);
-			$sth->execute($fromintid, $hopid, $seq);
-			$sth->finish();
+		    my @hoplist; # list for all the hops to add
+
+		    print "fromint: $fromintid, seq: $seq, hopid: $hopid<br/>\n";
+
+		    # is there a link with one or two of these interfaces already?
+		    my $query = "SELECT id FROM linklist WHERE interface_id = ?";
+		    my $linksth = $dbh->prepare($query);
+		    if (($readonlymode == 0) && ($finished == 0)) {
+			$linksth->execute($fromintid);
+			if ($linksth->fetchrow_hashref()) {
+			    # yes sir, found with fromintid
+			    print "yes sir, found with fromintid<br/>\n";
+
+			    push(@hoplist,$hopid);
+
+			    my $hopquery = "SELECT FROM linklist WHERE from_interface_id = ? ORDER BY seq ASC";
+			    my $hopsth = $dbh->prepare($hopquery);
+			    $hopsth->execute($fromintid);
+			    my $row;
+			    while ($row = $hopsth->fetchrow_arrayref()) {
+				push(@hoplist,$row->[0]);
+			    }
+			    $hopsth->finish();
+			    
+			    my $cleanupquery = "DELETE FROM linklist WHERE from_interface_id = (SELECT from_interface_id FROM linklist WHERE interface_id = ?)";
+			    $hopsth = $dbh->prepare($cleanupquery);
+			    $hopsth->execute($fromintid);
+			    $hopsth->finish();
+
+			    $finished = 1;
+			}
+			$linksth->finish();
 		    }
-		    print_refresh_javascript("command=edit&subcommand=device&id=".device_id_for_interface($fromintid));
+
+		    if (($readonlymode == 0) && ($finished == 0)) {
+			$linksth = $dbh->prepare($query);
+			$linksth->execute($hopid);
+			if ($linksth->fetchrow_hashref()) {
+			    # yes sir, found with hopid
+			    print "yes sir, found with hopid<br/>\n";
+
+			    my $hopquery = "SELECT interface_id FROM linklist WHERE from_interface_id = (SELECT from_interface_id FROM linklist WHERE interface_id = ?) ORDER BY seq DESC";
+			    my $hopsth = $dbh->prepare($hopquery);
+			    $hopsth->execute($hopid);
+			    my $row;
+			    while ($row = $hopsth->fetchrow_arrayref()) {
+				print "adding hop $row->[0]<br/>\n";
+				push(@hoplist,$row->[0]);
+			    }
+			    $hopsth->finish();
+
+			    $hopsth = $dbh->prepare("SELECT DISTINCT from_interface_id FROM linklist WHERE interface_id = ?");
+			    $hopsth->execute($hopid);
+			    while ($row = $hopsth->fetchrow_arrayref()) {
+				print "adding hop (from_interface_id) $row->[0]<br/>\n";
+				push(@hoplist,$row->[0]);
+			    }
+			    $hopsth->finish();
+
+			    my $cleanupquery = "DELETE FROM linklist WHERE from_interface_id = (SELECT from_interface_id FROM linklist WHERE interface_id = ?)";
+			    $hopsth = $dbh->prepare($cleanupquery);
+			    $hopsth->execute($hopid);
+			    $hopsth->finish();
+			}
+			$linksth->finish();
+			$finished = 1;
+		    }
+
+		    if ($finished == 0) {
+			push(@hoplist,$hopid);
+			$finished = 1;
+		    }
+
+		    print "hoplist: @hoplist<br/>\n";
+
+		    if ($readonlymode == 0) {
+			foreach my $hop (@hoplist) {
+			    $query = "INSERT INTO linklist (from_interface_id, interface_id, seq) VALUES (?, ?, ?)";
+			    print "executing $query with $fromintid, $hop, $seq\n";
+			    $sth = $dbh->prepare($query);
+			    $sth->execute($fromintid, $hop, $seq);
+			    $sth->finish();
+			    $seq++;
+			}
+		    }
+#		    print_refresh_javascript("command=edit&subcommand=device&id=".device_id_for_interface($fromintid));
 		}
 	    }
 	}
