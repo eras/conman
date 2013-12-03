@@ -297,6 +297,11 @@ sub edit_rack($) {
     $devtable->print;
 }
 
+sub linklist_edit_link( $ ) {
+    my ($id) = @_;
+    return "<a href=\"$scriptname?command=edit&subcommand=linklist&id=$id\">$id</a>";
+}
+
 sub edit_device($) {
     my ($id) = @_;
 
@@ -361,7 +366,7 @@ sub edit_device($) {
 	    push(@addhopform, (select_id_name($query_interface_id_name,'hopid',0).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="hop"/><input type="hidden" name="fromintid" value="'.get_from_interface_id_for_interface($row->[0]).'"/><input type="hidden" name="seq" value="'.$seq.'"/>', submit('submit','add hop')));
 	}
 	if (@connections > 1) {
-	    $inttable->addRow("<a href=\"$scriptname?command=edit&subcommand=linklist&id=$id\">$id</a>", $row->[1], $row->[2], @connections, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
+	    $inttable->addRow(linklist_edit_link($id), $row->[1], $row->[2], @connections, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
 	} else {
 	    $inttable->addRow(@$row, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=interface&id=$row->[0]\">delete interface</a>");
 	}
