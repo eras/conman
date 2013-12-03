@@ -641,9 +641,9 @@ if ($command && $subcommand) {
 			    $hopsth = $dbh->prepare($cleanupquery);
 			    $hopsth->execute($hopid);
 			    $hopsth->finish();
+			    $finished = 1;
 			}
 			$linksth->finish();
-			$finished = 1;
 		    }
 
 		    if ($finished == 0) {
@@ -656,7 +656,7 @@ if ($command && $subcommand) {
 		    if ($readonlymode == 0) {
 			foreach my $hop (@hoplist) {
 			    $query = "INSERT INTO linklist (from_interface_id, interface_id, seq) VALUES (?, ?, ?)";
-			    print "executing $query with $fromintid, $hop, $seq\n";
+			    print "executing $query with $fromintid, $hop, $seq<br/>\n";
 			    $sth = $dbh->prepare($query);
 			    $sth->execute($fromintid, $hop, $seq);
 			    $sth->finish();
