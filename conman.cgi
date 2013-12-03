@@ -6,6 +6,7 @@ use DBI;
 use Switch;
 use HTML::Table;
 use CGI qw(:standard);
+use GraphViz;
 
 # user editable variables begin
 my $dbfile = './cables.db';
@@ -24,8 +25,9 @@ my $query_rack_id_name = "select id, name from rack order by name";
 my $query_list_room = "SELECT id, name, description, notes FROM room ORDER BY name ASC";
 my $query_list_rack = "SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY rack.name ASC";
 my $query_list_device = "SELECT device.id, device.name, device_type.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY device.name";
-my $query_list_interface = "SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, length(interface.name), interface.name ASC";
+my $query_list_interface = "SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes, device.id, interface.name FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, length(interface.name), interface.name ASC";
 my $query_list_connection = "SELECT i1.id, d1.name || '.' || i1.name, d2.name || '.' || i2.name, linklist.seq FROM interface AS i1, interface AS i2, linklist, device AS d1, device AS d2 WHERE linklist.from_interface_id = i1.id AND linklist.interface_id=i2.id AND i1.device_id=d1.id AND i2.device_id=d2.id ORDER BY d1.name, i1.name, linklist.seq";
+my $query_list_from_interface_id = "SELECT from_interface_id FROM linklist GROUP BY from_interface_id";
 
 my $dbh;
 
@@ -82,6 +84,7 @@ sub print_navigation() {
     print "    <td><a href=\"".$scriptname."?command=list&subcommand=device\">Devices</a></td>\n";
     print "    <td><a href=\"".$scriptname."?command=list&subcommand=interface\">Interfaces</a></td>\n";
     print "    <td><a href=\"".$scriptname."?command=list&subcommand=connection\">Connections</a></td>\n";
+    print "    <td><a href=\"".$scriptname."?command=graph&subcommand=all\">Graph</a></td>\n";
     print "  </tr>\n";
     print "</table>\n";
     print "</center>\n";
@@ -398,6 +401,72 @@ sub device_id_for_interface($) {
     return $devid;
 }
 
+sub print_graph( $ ) {
+    my ($format) = @_;
+    if ($format eq "svg") {
+	print header("image/svg+xml");
+    } elsif ($format eq "dot") {
+	print header("text/plain");
+    }
+    my $g = GraphViz->new(layout => "dot", overlap=>"scalexy", random_start=>"1", directed=>"0", rankdir=>"LR");
+
+    my $stm = $dbh->prepare($query_list_device);
+    $stm->execute();
+    my %device_info;
+    my %device_ifs;
+    while (my $r = $stm->fetchrow_arrayref()) {
+	$device_info{$r->[0]} = [@{$r}];
+	#$g->add_node("dev" . $r->[0], label => [$r->[1], "moi"], shape => "box");
+    }
+    $stm->finish();
+    $stm = $dbh->prepare($query_list_interface);
+    $stm->execute();
+    my %if_devs;
+    while (my $r = $stm->fetchrow_arrayref()) {
+	$if_devs{$r->[0]} = $r->[4];
+	push @{$device_ifs{$r->[4]}}, [@{$r}];
+    }
+    foreach my $device_id (keys %device_ifs) {
+	my $r = $device_info{$device_id};
+	my @if_names = map { $_->[5] } @{$device_ifs{$device_id}};
+	$g->add_node("dev" . $r->[0], label => [$r->[1], @if_names], shape => "box");
+    }
+    $stm->finish();
+    $stm = $dbh->prepare($query_list_from_interface_id);
+    $stm->execute();
+    my $find_device_port = sub ( $ ) {
+	my ($interface_id) = @_;
+	my $device_id = $if_devs{$interface_id};
+	my $ifs = $device_ifs{$device_id};
+	for (my $interface_idx = 0; $interface_idx < @{$ifs}; ++$interface_idx) {
+	    return ($device_id, $interface_idx + 1) if $ifs->[$interface_idx]->[0] == $interface_id;
+	}
+	return ($device_id, 0);
+    };
+
+    while (my $r = $stm->fetchrow_arrayref()) {
+	my @connections = get_connection_id_list_for_interface($r->[0]);
+        my $prev = $connections[0];
+	for (my $c = 1; $c < @connections; ++$c) {
+	    my $cur = $connections[$c];
+	    my ($from_device, $from_port) = &$find_device_port($prev);
+	    my ($to_device, $to_port) = &$find_device_port($cur);
+	    #$g->add_edge("if" . $prev => "if" . $cur);
+	    $g->add_edge("dev" . $from_device => "dev" . $to_device,
+			 from_port => $from_port, 
+			 to_port => $to_port);
+	    $prev = $connections[$c];
+	}
+    }
+    $stm->finish();
+
+    if ($format eq "svg") {
+	print $g->as_svg;
+    } elsif ($format eq "dot") {
+	print $g->as_canon;
+    }
+}
+
 ##################################################################3
 # sub-routines end, main begins
 ##################################################################3
@@ -417,14 +486,28 @@ if ($doinit == 1) {
   init_db();
 }
 
+my $command = param('command');
+my $subcommand = param('subcommand');
+
+if ($command && $command eq "svg") {
+    print_graph("svg");
+    exit 0;
+}
+
+if ($command && $command eq "dot") {
+    print_graph("dot");
+    exit 0;
+}
+
 print_header();
 print_navigation();
 
 my $sth;
-my $command = param('command');
-my $subcommand = param('subcommand');
 if ($command && $subcommand) {
     switch ($command) {
+	case "graph" {
+	    print "<img src=\"$scriptname?command=svg\" width=\"100%\"/>";
+	}
 	case "list" {
 	    my $table = new HTML::Table();
 	    my @addNewItemRow;

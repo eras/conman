@@ -14,6 +14,7 @@ ConnectionManager
        - Perl CGI
        - Perl DBI
        - Perl HTML::Table
+       - Perl GraphViz
   2.2  Copy the conman.cgi file to a directory accessible by your web server,
        i.e. Apache HTTPD. We'll call this directory INSTALLPATH.
   2.3  Select a location (path) under your web server where the application
