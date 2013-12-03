@@ -348,6 +348,7 @@ sub edit_device($) {
     while ($row = $devintsth->fetchrow_arrayref()) {
 	my @connections;
 	my @addhopform;
+	my $id = $row->[0];
 	@connections = get_connection_list_for_interface($row->[0]);
 	if (@connections < $MAXHOPS) {
 	    my $seq = @connections;
@@ -360,7 +361,7 @@ sub edit_device($) {
 	    push(@addhopform, (select_id_name($query_interface_id_name,'hopid',0).'<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="hop"/><input type="hidden" name="fromintid" value="'.get_from_interface_id_for_interface($row->[0]).'"/><input type="hidden" name="seq" value="'.$seq.'"/>', submit('submit','add hop')));
 	}
 	if (@connections > 1) {
-	    $inttable->addRow(@$row, @connections, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
+	    $inttable->addRow("<a href=\"$scriptname?command=edit&subcommand=linklist&id=$id\">$id</a>", $row->[1], $row->[2], @connections, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=connection&id=$row->[0]\">delete connection</a>");
 	} else {
 	    $inttable->addRow(@$row, @addhopform, "<a href=\"$scriptname?command=remove&subcommand=interface&id=$row->[0]\">delete interface</a>");
 	}
@@ -381,6 +382,82 @@ sub edit_device($) {
     $inttable = new HTML::Table();
     $inttable->addRow(textfield('name','name',10,20), select_id_name($query_interface_type_id_name,'typeid',0), textfield('notes','', 20,40), '<input type="hidden" name="command" value="add"/><input type="hidden" name="subcommand" value="interface"/>'.hidden('deviceid',"$id").submit('submit', 'add'));
     $inttable->print;
+    print end_form();
+}
+
+sub edit_linklist( $ ) {
+    my ($interface) = @_;
+    my $from_interface_id = get_from_interface_id_for_interface($interface);
+    my $addsequence = param('addsequence');
+
+    print "<h3>Link sequence</h3>\n";
+    print start_form(-method=>'get', -action=>"$scriptname");
+    print hidden("command", "edit");
+    print hidden("subcommand", "linklist");
+    print hidden("id", $from_interface_id);
+    print hidden("addsequence", $addsequence) if defined $addsequence;
+
+    if (param("submit")) {
+	my $additional = param("additional");
+	$dbh->begin_work;
+	delete_connection($from_interface_id);
+	my $stm = $dbh->prepare("INSERT INTO linklist (from_interface_id, interface_id, seq) VALUES (?, ?, ?)");
+	my @sequence;
+	push @sequence, $additional if defined $addsequence && $addsequence == -1;
+	for (my $seq = 1; defined param("seq$seq"); ++$seq) {
+	    push @sequence, param("seq$seq");
+	    push @sequence, $additional if defined $addsequence && $seq == $addsequence;
+	}
+	#print "sequence: @sequence<br>\n";
+	if (@sequence > 1) {
+	    $from_interface_id = $sequence[0];
+	    #print "execute($from_interface_id, $sequence[1], 1)<br>";
+	    $stm->execute($from_interface_id, $sequence[1], 1);
+	    for (my $seq = 2; $seq < @sequence; ++$seq) {
+		eval {
+		    #print "execute($from_interface_id, $sequence[$seq], $seq)<br>";
+		    $stm->execute($from_interface_id, $sequence[$seq], $seq);
+		};
+		if ($@) {
+		    print join(" ", "meh", $@, "<br>");
+		}
+	    }
+	}
+	print join(" ", "done", "<br>");
+	$stm->finish();
+	$dbh->commit;
+    }
+
+    my $inttable = new HTML::Table();
+    #$inttable->addRow("ID", "Connections");
+    my @connections = get_connection_id_list_for_interface($from_interface_id);
+    my $nth = 1;
+    if (!defined $addsequence) {
+	my $link_for_nth = sub {
+	    my ($nth) = @_;
+	    ("<a href=\"$scriptname?command=edit&subcommand=linklist&id=$from_interface_id&addsequence=".($nth - 1)."\">*</a>",
+	     )
+	};
+	@connections = map {
+	    my @r = (&$link_for_nth($nth), select_id_name($query_interface_id_name,"seq$nth",$_));
+	    ++$nth;
+	    @r
+	} @connections;
+	push @connections, &$link_for_nth($nth);
+    } else {
+	@connections = map {
+	    my @r = select_id_name($query_interface_id_name,"seq$nth",$_);
+	    ++$nth;
+	    @r;
+	} @connections;
+	@connections = (@connections[0..$addsequence],
+			select_id_name($query_interface_id_name, 'additional', 0),
+			@connections[$addsequence + 1..$#connections]);
+    }
+    if (defined $addsequence) {
+    }
+    $inttable->addRow(@connections, submit('submit', 'replace'));
+    $inttable->print();
     print end_form();
 }
 
@@ -656,6 +733,9 @@ if ($command && $subcommand) {
 		    }
 		    case "device" {
 			edit_device($id);
+		    }
+		    case "linklist" {
+			edit_linklist($id);
 		    }
 		    case "interface" {
 			edit_device(device_id_for_interface($id));
