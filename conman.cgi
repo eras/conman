@@ -580,8 +580,6 @@ if ($command && $subcommand) {
 
 		    my @hoplist; # list for all the hops to add
 
-		    print "fromint: $fromintid, seq: $seq, hopid: $hopid<br/>\n";
-
 		    # is there a link with one or two of these interfaces already?
 		    my $query = "SELECT id FROM linklist WHERE from_interface_id = ?";
 		    my $linksth = $dbh->prepare($query);
@@ -589,7 +587,6 @@ if ($command && $subcommand) {
 			$linksth->execute($hopid);
 			if ($linksth->fetchrow_hashref()) {
 			    # yes sir, found a forward connection
-			    print "yes sir, found a forward connection<br/>\n";
 
 			    push(@hoplist,$hopid);
 
@@ -618,14 +615,12 @@ if ($command && $subcommand) {
 			$linksth->execute($hopid);
 			if ($linksth->fetchrow_hashref()) {
 			    # yes sir, found a reverse connection
-			    print "yes sir, found a reverse connection<br/>\n";
 
 			    my $hopquery = "SELECT interface_id FROM linklist WHERE from_interface_id = (SELECT from_interface_id FROM linklist WHERE interface_id = ?) ORDER BY seq DESC";
 			    my $hopsth = $dbh->prepare($hopquery);
 			    $hopsth->execute($hopid);
 			    my $row;
 			    while ($row = $hopsth->fetchrow_arrayref()) {
-				print "adding hop $row->[0]<br/>\n";
 				push(@hoplist,$row->[0]);
 			    }
 			    $hopsth->finish();
@@ -633,7 +628,6 @@ if ($command && $subcommand) {
 			    $hopsth = $dbh->prepare("SELECT DISTINCT from_interface_id FROM linklist WHERE interface_id = ?");
 			    $hopsth->execute($hopid);
 			    while ($row = $hopsth->fetchrow_arrayref()) {
-				print "adding hop (from_interface_id) $row->[0]<br/>\n";
 				push(@hoplist,$row->[0]);
 			    }
 			    $hopsth->finish();
@@ -652,19 +646,16 @@ if ($command && $subcommand) {
 			$finished = 1;
 		    }
 
-		    print "hoplist: @hoplist<br/>\n";
-
 		    if ($readonlymode == 0) {
 			foreach my $hop (@hoplist) {
 			    $query = "INSERT INTO linklist (from_interface_id, interface_id, seq) VALUES (?, ?, ?)";
-			    print "executing $query with $fromintid, $hop, $seq<br/>\n";
 			    $sth = $dbh->prepare($query);
 			    $sth->execute($fromintid, $hop, $seq);
 			    $sth->finish();
 			    $seq++;
 			}
 		    }
-#		    print_refresh_javascript("command=edit&subcommand=device&id=".device_id_for_interface($fromintid));
+		    print_refresh_javascript("command=edit&subcommand=device&id=".device_id_for_interface($fromintid));
 		}
 	    }
 	}
