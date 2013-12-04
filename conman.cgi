@@ -583,28 +583,28 @@ if ($command && $subcommand) {
 		    print "fromint: $fromintid, seq: $seq, hopid: $hopid<br/>\n";
 
 		    # is there a link with one or two of these interfaces already?
-		    my $query = "SELECT id FROM linklist WHERE interface_id = ?";
+		    my $query = "SELECT id FROM linklist WHERE from_interface_id = ?";
 		    my $linksth = $dbh->prepare($query);
 		    if (($readonlymode == 0) && ($finished == 0)) {
-			$linksth->execute($fromintid);
+			$linksth->execute($hopid);
 			if ($linksth->fetchrow_hashref()) {
-			    # yes sir, found with fromintid
-			    print "yes sir, found with fromintid<br/>\n";
+			    # yes sir, found a forward connection
+			    print "yes sir, found a forward connection<br/>\n";
 
 			    push(@hoplist,$hopid);
 
-			    my $hopquery = "SELECT FROM linklist WHERE from_interface_id = ? ORDER BY seq ASC";
+			    my $hopquery = "SELECT interface_id FROM linklist WHERE from_interface_id = ? ORDER BY seq ASC";
 			    my $hopsth = $dbh->prepare($hopquery);
-			    $hopsth->execute($fromintid);
+			    $hopsth->execute($hopid);
 			    my $row;
 			    while ($row = $hopsth->fetchrow_arrayref()) {
 				push(@hoplist,$row->[0]);
 			    }
 			    $hopsth->finish();
 			    
-			    my $cleanupquery = "DELETE FROM linklist WHERE from_interface_id = (SELECT from_interface_id FROM linklist WHERE interface_id = ?)";
+			    my $cleanupquery = "DELETE FROM linklist WHERE from_interface_id = ?";
 			    $hopsth = $dbh->prepare($cleanupquery);
-			    $hopsth->execute($fromintid);
+			    $hopsth->execute($hopid);
 			    $hopsth->finish();
 
 			    $finished = 1;
@@ -612,12 +612,13 @@ if ($command && $subcommand) {
 			$linksth->finish();
 		    }
 
+		    $query = "SELECT id FROM linklist WHERE interface_id = ?";
 		    if (($readonlymode == 0) && ($finished == 0)) {
 			$linksth = $dbh->prepare($query);
 			$linksth->execute($hopid);
 			if ($linksth->fetchrow_hashref()) {
-			    # yes sir, found with hopid
-			    print "yes sir, found with hopid<br/>\n";
+			    # yes sir, found a reverse connection
+			    print "yes sir, found a reverse connection<br/>\n";
 
 			    my $hopquery = "SELECT interface_id FROM linklist WHERE from_interface_id = (SELECT from_interface_id FROM linklist WHERE interface_id = ?) ORDER BY seq DESC";
 			    my $hopsth = $dbh->prepare($hopquery);
