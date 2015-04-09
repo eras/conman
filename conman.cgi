@@ -15,16 +15,16 @@ my $readonlymode = 0;
 
 my $MAXHOPS = 4; # changing this requires changes also to html (link1, link2, ... link[MAXHOPS-1])
 
-my $query_interface_id_name = "SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON device.id = interface.device_id ORDER BY device.name ASC, interface.name ASC";
+my $query_interface_id_name = "SELECT interface.id, device.name || '.' || interface.name FROM interface INNER JOIN device ON device.id = interface.device_id ORDER BY device.name ASC, length(interface.name), interface.name ASC";
 my $query_interface_type_id_name = "select id, name from interface_type";
 my $query_device_type_id_name = "select id, name from device_type";
 my $query_room_id_name = "select id, name from room";
-my $query_rack_id_name = "select id, name from rack";
+my $query_rack_id_name = "select id, name from rack order by name";
 
 my $query_list_room = "SELECT id, name, description, notes FROM room ORDER BY name ASC";
 my $query_list_rack = "SELECT rack.id, rack.name, rack.description, room.name, rack.notes FROM rack INNER JOIN room ON rack.room_id=room.id ORDER BY rack.name ASC";
 my $query_list_device = "SELECT device.id, device.name, device_type.name, rack.name, device.description, device.notes FROM device INNER JOIN device_type ON device.device_type_id=device_type.id INNER JOIN rack ON device.rack_id=rack.id ORDER BY device.name";
-my $query_list_interface = "SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, interface.name ASC";
+my $query_list_interface = "SELECT interface.id, device.name || '.' || interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id INNER JOIN device ON interface.device_id=device.id ORDER BY device.name ASC, length(interface.name), interface.name ASC";
 my $query_list_connection = "SELECT i1.id, d1.name || '.' || i1.name, d2.name || '.' || i2.name, linklist.seq FROM interface AS i1, interface AS i2, linklist, device AS d1, device AS d2 WHERE linklist.from_interface_id = i1.id AND linklist.interface_id=i2.id AND i1.device_id=d1.id AND i2.device_id=d2.id ORDER BY d1.name, i1.name, linklist.seq";
 
 my $dbh;
@@ -322,7 +322,7 @@ sub edit_device($) {
     print start_form(-method=>'get', -action=>"$scriptname");
     my $inttable = new HTML::Table();
     $inttable->addRow("ID", "Name", "Type", "Notes", "Connections");
-    my $devintsth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id WHERE interface.device_id = ? ORDER BY interface.name");
+    my $devintsth = $dbh->prepare("SELECT interface.id, interface.name, interface_type.name, interface.notes FROM interface INNER JOIN interface_type ON interface.interface_type_id=interface_type.id WHERE interface.device_id = ? ORDER BY length(interface.name), interface.name");
     $devintsth->execute($id);
     while ($row = $devintsth->fetchrow_arrayref()) {
 	my @connections;
